@@ -168,15 +168,32 @@ with tab1:
 
 # === 2. Checklist de Atividades por Setor ===
 with tab2:
-    st.header("Checklist Diário de Atividades")
+    st.header("🧼 Checklist Diário de Atividades")
 
-    setor_checklist = st.selectbox("Selecione o Setor", [
-        "Pré-parto", "Parto", "Recuperação", "Berçário", "UTI Neonatal"
-    ])
-    data_checklist = st.date_input("Data da Atividade")
+    # Mesma lista de setores da aba Lançamento de Materiais
+    setores = [
+        "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
+        "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
+        "Uti Neo", "Ucinco", "Ucinca", "Uti Materna", "Ambulatório",
+        "6º Norte", "6º Sul", "7º Norte", "7º Sul", "8º Norte",
+        "8º Sul", "Subsolo", "Casa Da Gestante", "Resíduos",
+        "Nutrição", "Lactário", "Lavanderia"
+    ]
 
-    st.subheader("Itens de Limpeza")
+    turno_opcoes = ["Manhã", "Tarde", "Noite"]
+
     col1, col2 = st.columns(2)
+    with col1:
+        setor_checklist = st.selectbox("📍 Selecione o Setor", setores)
+    with col2:
+        turno = st.selectbox("⏰ Selecione o Turno", turno_opcoes)
+
+    data_checklist = st.date_input("📅 Data da Atividade")
+    colaborador = st.text_input("🧑‍🔧 Colaborador(a) Responsável")
+
+    st.subheader("✅ Itens de Limpeza")
+
+    coluna1, coluna2 = st.columns(2)
 
     itens = {
         "Pisos lavados e secos": False,
@@ -187,28 +204,42 @@ with tab2:
         "Produtos reabastecidos": False,
         "Sinalização adequada": False,
         "Ferramentas organizadas": False,
+        "Lixeiras higienizadas": False,
+        "Portas e maçanetas limpas": False,
+        "Banheiros limpos e abastecidos": False,
+        "EPI's utilizados corretamente": False,
     }
 
     respostas = {}
     for i, (item, default) in enumerate(itens.items()):
         if i < len(itens) // 2:
-            with col1:
-                respostas[item] = st.checkbox(item, value=default)
+            with coluna1:
+                respostas[item] = st.checkbox(item, value=default, key=f"check_{i}")
         else:
-            with col2:
-                respostas[item] = st.checkbox(item, value=default)
+            with coluna2:
+                respostas[item] = st.checkbox(item, value=default, key=f"check_{i}_col2")
 
-    obs_checklist = st.text_area("Observações Gerais")
+    obs_checklist = st.text_area("📌 Observações Gerais")
 
-    if st.button("Salvar Checklist de Atividades"):
+    # Upload de imagem
+    imagem_upload = st.file_uploader("📷 Faça upload de uma imagem (comprovante)", type=["jpg", "jpeg", "png"])
+
+    if st.button("💾 Salvar Checklist"):
         df = pd.DataFrame({
             "Data": [data_checklist],
             "Setor": [setor_checklist],
+            "Turno": [turno],
+            "Colaborador": [colaborador],
             **{k: [v] for k, v in respostas.items()},
-            "Observação": [obs_checklist]
+            "Observação": [obs_checklist],
+            "Imagem": [imagem_upload.name if imagem_upload else None]
         })
+
         salvar_dados(df, "checklists_atividades.csv")
         st.success("✅ Checklist salvo com sucesso!")
+
+        if imagem_upload:
+            st.image(imagem_upload, caption="Comprovante Enviado", use_column_width=True)
 
 # === 3. Checklist do Carro Funcional ===
 with tab3:

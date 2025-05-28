@@ -44,25 +44,41 @@ with tab1:
         setor = st.selectbox("📍 Selecione o Setor", setores)
 
         st.markdown("---")
-        st.subheader("🗂 Escolha os Itens Utilizados")
+        st.subheader("🗂 Itens Utilizados")
 
-        col1, col2 = st.columns(2)
+        # Papéis
+        st.markdown("### 📄 Papéis")
+        papel_bobina = st.number_input("P. Bobina", min_value=0, step=1, key="p_bobina")
+        papel_higienico = st.number_input("P. Higiênico", min_value=0, step=1, key="p_higienico")
+        papel_tolha = st.number_input("Papel Tolha", min_value=0, step=1, key="p_tolha")
 
-        with col1:
-            papel_selecionado = st.selectbox("📄 Papéis", ["", "P. Bobina", "P. Higiênico", "Papel Tolha"])
-            quantidade_papel = st.number_input("Quantidade (Papéis)", min_value=0, step=1)
+        # Sacos
+        st.markdown("### 🛍️ Sacos")
+        saco_30p = st.number_input("30p", min_value=0, step=1, key="saco_30p")
+        saco_50p = st.number_input("50p", min_value=0, step=1, key="saco_50p")
+        saco_100p = st.number_input("100p", min_value=0, step=1, key="saco_100p")
+        saco_200p = st.number_input("200p", min_value=0, step=1, key="saco_200p")
+        saco_50b = st.number_input("50b", min_value=0, step=1, key="saco_50b")
+        saco_100b = st.number_input("100b", min_value=0, step=1, key="saco_100b")
+        saco_200b = st.number_input("200b", min_value=0, step=1, key="saco_200b")
+        saco_50v = st.number_input("50v", min_value=0, step=1, key="saco_50v")
+        ramper = st.number_input("Ramber", min_value=0, step=1, key="ramper")
 
-        with col2:
-            saco_selecionado = st.selectbox("🛍️ Sacos", ["", "30p", "50p", "100p", "200p", "50b", "100b", "200b", "50v", "Ramber"])
-            quantidade_saco = st.number_input("Quantidade (Sacos)", min_value=0, step=1)
+        # Sabonetes
+        st.markdown("### 🧼 Sabonetes")
+        sabonete_neutro = st.number_input("Neutro", min_value=0, step=1, key="sabonete_neutro")
+        sabonete_erva_doce = st.number_input("Erva Doce", min_value=0, step=1, key="sabonete_erva_doce")
+        sabonete_clorexidina = st.number_input("Clorexidina", min_value=0, step=1, key="sabonete_clorexidina")
+        alcool_gel = st.number_input("Álcool Gel", min_value=0, step=1, key="alcool_gel")
+        alcool_70 = st.number_input("Álcool 70", min_value=0, step=1, key="alcool_70")
 
-        with col1:
-            sabonete_selecionado = st.selectbox("🧼 Sabonetes", ["", "Neutro", "Erva Doce", "Clorexidina", "Álcool Gel", "Álcool 70"])
-            quantidade_sabonete = st.number_input("Quantidade (Sabonetes)", min_value=0, step=1)
-
-        with col2:
-            produto_selecionado = st.selectbox("🧪 Produtos", ["", "Desinfetante", "Hipoclorito", "Peróxido", "Detergente", "Quartenário"])
-            quantidade_produto = st.number_input("Quantidade (Produtos)", min_value=0, step=1)
+        # Produtos
+        st.markdown("### 🧴 Produtos")
+        desinfetante = st.number_input("Desinfetante", min_value=0, step=1, key="desinfetante")
+        hipoclorito = st.number_input("Hipoclorito", min_value=0, step=1, key="hipoclorito")
+        peroxido = st.number_input("Peróxido", min_value=0, step=1, key="peroxido")
+        detergente = st.number_input("Detergente", min_value=0, step=1, key="detergente")
+        quartenario = st.number_input("Quartenário", min_value=0, step=1, key="quartenario")
 
         obs = st.text_area("📌 Observações")
 
@@ -71,56 +87,64 @@ with tab1:
         if submit_material:
             registros = []
 
-            if papel_selecionado and quantidade_papel > 0:
-                registros.append({
-                    "Data": data_uso,
-                    "Setor": setor,
-                    "Item": papel_selecionado,
-                    "Quantidade": quantidade_papel,
-                    "Colaborador": colaborador,
-                    "Tipo": "Papel",
-                    "Observação": obs
-                })
+            # Papéis
+            if papel_bobina > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Bobina", "Quantidade": papel_bobina, "Colaborador": colaborador, "Tipo": "Papel", "Observação": obs})
+            if papel_higienico > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Higiênico", "Quantidade": papel_higienico, "Colaborador": colaborador, "Tipo": "Papel", "Observação": obs})
+            if papel_tolha > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Papel Tolha", "Quantidade": papel_tolha, "Colaborador": colaborador, "Tipo": "Papel", "Observação": obs})
 
-            if saco_selecionado and quantidade_saco > 0:
-                registros.append({
-                    "Data": data_uso,
-                    "Setor": setor,
-                    "Item": saco_selecionado,
-                    "Quantidade": quantidade_saco,
-                    "Colaborador": colaborador,
-                    "Tipo": "Saco",
-                    "Observação": obs
-                })
+            # Sacos
+            if saco_30p > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "30p", "Quantidade": saco_30p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if saco_50p > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "50p", "Quantidade": saco_50p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if saco_100p > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "100p", "Quantidade": saco_100p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if saco_200p > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "200p", "Quantidade": saco_200p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if saco_50b > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "50b", "Quantidade": saco_50b, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if saco_100b > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "100b", "Quantidade": saco_100b, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if saco_200b > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "200b", "Quantidade": saco_200b, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if saco_50v > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "50v", "Quantidade": saco_50v, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+            if ramper > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Ramber", "Quantidade": ramper, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
 
-            if sabonete_selecionado and quantidade_sabonete > 0:
-                registros.append({
-                    "Data": data_uso,
-                    "Setor": setor,
-                    "Item": sabonete_selecionado,
-                    "Quantidade": quantidade_sabonete,
-                    "Colaborador": colaborador,
-                    "Tipo": "Sabonete",
-                    "Observação": obs
-                })
+            # Sabonetes
+            if sabonete_neutro > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Neutro", "Quantidade": sabonete_neutro, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+            if sabonete_erva_doce > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Erva Doce", "Quantidade": sabonete_erva_doce, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+            if sabonete_clorexidina > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Clorexidina", "Quantidade": sabonete_clorexidina, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+            if alcool_gel > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool Gel", "Quantidade": alcool_gel, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+            if alcool_70 > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool 70", "Quantidade": alcool_70, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
 
-            if produto_selecionado and quantidade_produto > 0:
-                registros.append({
-                    "Data": data_uso,
-                    "Setor": setor,
-                    "Item": produto_selecionado,
-                    "Quantidade": quantidade_produto,
-                    "Colaborador": colaborador,
-                    "Tipo": "Produto",
-                    "Observação": obs
-                })
+            # Produtos
+            if desinfetante > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Desinfetante", "Quantidade": desinfetante, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+            if hipoclorito > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Hipoclorito", "Quantidade": hipoclorito, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+            if peroxido > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Peróxido", "Quantidade": peroxido, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+            if detergente > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Detergente", "Quantidade": detergente, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+            if quartenario > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Quartenário", "Quantidade": quartenario, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
 
             if registros:
                 df_novo = pd.DataFrame(registros)
                 salvar_dados(df_novo, "dados_materiais.csv")
                 st.success(f"✅ {len(registros)} registro(s) salvos com sucesso!")
             else:
-                st.warning("⚠️ Nenhum item foi selecionado ou quantidade é zero.")
+                st.warning("⚠️ Nenhum item foi preenchido com quantidade maior que zero.")
 
 # === 2. Checklist de Atividades por Setor ===
 with tab2:

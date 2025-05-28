@@ -384,19 +384,19 @@ with tab4:
         df_produtos = df_materiais_filtrado[df_materiais_filtrado['Tipo'] == 'Produto']
 
         if not df_produtos.empty:
-        resumo_produtos_setor = df_produtos.groupby(['Setor', 'Item'])['Quantidade'].sum().reset_index()
+            resumo_produtos_setor = df_produtos.groupby(['Setor', 'Item'])['Quantidade'].sum().reset_index()
 
-        fig_produtos = px.bar(
-        resumo_produtos_setor,
-        x='Setor',
-        y='Quantidade',
-        color='Item',
-        barmode='group',
-        title='Consumo de Produtos por Setor',
-        text_auto=True
+            fig_produtos = px.bar(
+                resumo_produtos_setor,
+                x='Setor',
+                y='Quantidade',
+                color='Item',
+                barmode='group',
+                title='Consumo de Produtos por Setor',
+                text_auto=True
         )
         st.plotly_chart(fig_produtos, use_container_width=True)
-        else:
+    else:
         st.info("ℹ️ Não há registros de produtos utilizados.")
 
         except FileNotFoundError as e:

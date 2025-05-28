@@ -30,7 +30,6 @@ with tab1:
 
     with st.form(key="form_material"):
         data_uso = st.date_input("📅 Data de Uso")
-        colaborador = st.text_input("🧑 Colaborador(a) Responsável")
 
         # Setores
         setores = [
@@ -80,7 +79,15 @@ with tab1:
         detergente = st.number_input("Detergente", min_value=0, step=1, key="detergente")
         quartenario = st.number_input("Quartenário", min_value=0, step=1, key="quartenario")
 
-        obs = st.text_area("📌 Observações")
+        # Copos
+        st.markdown("### 🥤 Copos")
+        copo_150ml = st.number_input("150ml", min_value=0, step=1, key="copo_150ml")
+        copo_50ml = st.number_input("50ml", min_value=0, step=1, key="copo_50ml")
+
+        # Mops
+        st.markdown("### 🧹 Mops")
+        mop_umido = st.number_input("Úmido", min_value=0, step=1, key="mop_umido")
+        mop_po = st.number_input("Pó", min_value=0, step=1, key="mop_po")
 
         submit_material = st.form_submit_button("💾 Salvar Registro")
 
@@ -89,55 +96,67 @@ with tab1:
 
             # Papéis
             if papel_bobina > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Bobina", "Quantidade": papel_bobina, "Colaborador": colaborador, "Tipo": "Papel", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Bobina", "Quantidade": papel_bobina, "Tipo": "Papel"})
             if papel_higienico > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Higiênico", "Quantidade": papel_higienico, "Colaborador": colaborador, "Tipo": "Papel", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Higiênico", "Quantidade": papel_higienico, "Tipo": "Papel"})
             if papel_tolha > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Papel Tolha", "Quantidade": papel_tolha, "Colaborador": colaborador, "Tipo": "Papel", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Papel Tolha", "Quantidade": papel_tolha, "Tipo": "Papel"})
 
             # Sacos
             if saco_30p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "30p", "Quantidade": saco_30p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "30p", "Quantidade": saco_30p, "Tipo": "Saco"})
             if saco_50p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "50p", "Quantidade": saco_50p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "50p", "Quantidade": saco_50p, "Tipo": "Saco"})
             if saco_100p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "100p", "Quantidade": saco_100p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "100p", "Quantidade": saco_100p, "Tipo": "Saco"})
             if saco_200p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "200p", "Quantidade": saco_200p, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "200p", "Quantidade": saco_200p, "Tipo": "Saco"})
             if saco_50b > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "50b", "Quantidade": saco_50b, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "50b", "Quantidade": saco_50b, "Tipo": "Saco"})
             if saco_100b > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "100b", "Quantidade": saco_100b, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "100b", "Quantidade": saco_100b, "Tipo": "Saco"})
             if saco_200b > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "200b", "Quantidade": saco_200b, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "200b", "Quantidade": saco_200b, "Tipo": "Saco"})
             if saco_50v > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "50v", "Quantidade": saco_50v, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "50v", "Quantidade": saco_50v, "Tipo": "Saco"})
             if ramper > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Ramber", "Quantidade": ramper, "Colaborador": colaborador, "Tipo": "Saco", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Ramber", "Quantidade": ramper, "Tipo": "Saco"})
 
             # Sabonetes
             if sabonete_neutro > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Neutro", "Quantidade": sabonete_neutro, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Neutro", "Quantidade": sabonete_neutro, "Tipo": "Sabonete"})
             if sabonete_erva_doce > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Erva Doce", "Quantidade": sabonete_erva_doce, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Erva Doce", "Quantidade": sabonete_erva_doce, "Tipo": "Sabonete"})
             if sabonete_clorexidina > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Clorexidina", "Quantidade": sabonete_clorexidina, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Clorexidina", "Quantidade": sabonete_clorexidina, "Tipo": "Sabonete"})
             if alcool_gel > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool Gel", "Quantidade": alcool_gel, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool Gel", "Quantidade": alcool_gel, "Tipo": "Sabonete"})
             if alcool_70 > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool 70", "Quantidade": alcool_70, "Colaborador": colaborador, "Tipo": "Sabonete", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool 70", "Quantidade": alcool_70, "Tipo": "Sabonete"})
 
             # Produtos
             if desinfetante > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Desinfetante", "Quantidade": desinfetante, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Desinfetante", "Quantidade": desinfetante, "Tipo": "Produto"})
             if hipoclorito > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Hipoclorito", "Quantidade": hipoclorito, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Hipoclorito", "Quantidade": hipoclorito, "Tipo": "Produto"})
             if peroxido > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Peróxido", "Quantidade": peroxido, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Peróxido", "Quantidade": peroxido, "Tipo": "Produto"})
             if detergente > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Detergente", "Quantidade": detergente, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Detergente", "Quantidade": detergente, "Tipo": "Produto"})
             if quartenario > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Quartenário", "Quantidade": quartenario, "Colaborador": colaborador, "Tipo": "Produto", "Observação": obs})
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Quartenário", "Quantidade": quartenario, "Tipo": "Produto"})
+
+            # Copos
+            if copo_150ml > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "150ml", "Quantidade": copo_150ml, "Tipo": "Copo"})
+            if copo_50ml > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "50ml", "Quantidade": copo_50ml, "Tipo": "Copo"})
+
+            # Mops
+            if mop_umido > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Úmido", "Quantidade": mop_umido, "Tipo": "Mop"})
+            if mop_po > 0:
+                registros.append({"Data": data_uso, "Setor": setor, "Item": "Pó", "Quantidade": mop_po, "Tipo": "Mop"})
 
             if registros:
                 df_novo = pd.DataFrame(registros)

@@ -396,7 +396,7 @@ with tab4:
                 text_auto=True
         )
         st.plotly_chart(fig_produtos, use_container_width=True)
-    else:
+        else:
         st.info("ℹ️ Não há registros de produtos utilizados.")
 
         except FileNotFoundError as e:

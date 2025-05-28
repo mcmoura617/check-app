@@ -346,5 +346,5 @@ with tab3:
         else:
             st.info("ℹ️ Não há dados de materiais para exibir.")
 
-    except Exception as e:
+        except Exception as e:
         st.warning(f"⚠️ Erro ao carregar painel: {e}")

@@ -292,12 +292,17 @@ with tab4:
     st.header("📊 Painel de Monitoramento")
 
     try:
-        # Carregar dados do CSV
+        # Carregar dados
         df_materiais = pd.read_csv("dados_materiais.csv")
+        df_checklist = pd.read_csv("checklists_atividades.csv")
 
-        # Converter coluna 'Data' para datetime
+        # Converter datas
         df_materiais['Data'] = pd.to_datetime(df_materiais['Data'])
+        df_checklist['Data'] = pd.to_datetime(df_checklist['Data'])
+
+        # Filtro por mês
         df_materiais['Mês'] = df_materiais['Data'].dt.to_period('M').astype(str)
+        df_checklist['Mês'] = df_checklist['Data'].dt.to_period('M').astype(str)
 
         # Aplicar estilo ao cabeçalho
         st.markdown("""
@@ -312,22 +317,21 @@ with tab4:
         </style>
         """, unsafe_allow_html=True)
 
-        # Filtros interativos
+        # Filtro por mês
         st.markdown('<div class="titulo-tabela">📅 Filtro por Mês</div>', unsafe_allow_html=True)
         meses_disponiveis = ["Todos"] + list(df_materiais["Mês"].unique())
-        filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis)
+        filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_painel")
 
-        # Filtrar por mês
+        # Filtrar dados pelo mês
         if filtro_mes != "Todos":
-            df_filtrado = df_materiais[df_materiais["Mês"] == filtro_mes]
+            df_materiais_filtrado = df_materiais[df_materiais["Mês"] == filtro_mes]
+            df_checklist_filtrado = df_checklist[df_checklist["Mês"] == filtro_mes]
         else:
-            df_filtrado = df_materiais.copy()
+            df_materiais_filtrado = df_materiais.copy()
+            df_checklist_filtrado = df_checklist.copy()
 
-        # Agrupamento: Itens como colunas, datas/setores como linhas
-        st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
-
-        # Pivot table: Linhas = Data/Setor, Colunas = Item, Valores = Quantidade
-        df_pivot = df_filtrado.pivot_table(
+        # Consolidar materiais
+        df_pivot_materiais = df_materiais_filtrado.pivot_table(
             index=["Data", "Setor"],
             columns="Item",
             values="Quantidade",
@@ -335,31 +339,43 @@ with tab4:
             fill_value=0
         ).reset_index()
 
-        # Ordenar por data (mais recente primeiro)
-        df_pivot = df_pivot.sort_values(by="Data", ascending=False).reset_index(drop=True)
+        # Consolidar checklist
+        colunas_itens = [col for col in df_checklist.columns if col not in ['Data', 'Setor', 'Turno', 'Colaborador', 'Observação', 'Imagem', 'Mês']]
+        df_checklist_filtrado['Itens_Concluidos'] = df_checklist_filtrado[colunas_itens].sum(axis=1)
+        df_checklist_filtrado['Total_Itens'] = len(colunas_itens)
+        df_checklist_filtrado['Percentual_Concluido'] = (df_checklist_filtrado['Itens_Concluidos'] / df_checklist_filtrado['Total_Itens']) * 100
 
-        # Tabela editável
-        editor_df = st.data_editor(df_pivot, key="editor_pivot", num_rows="dynamic")
+        # Tabela consolidada do checklist
+        st.markdown('<div class="titulo-tabela">📋 Resumo do Checklist</div>', unsafe_allow_html=True)
+        st.dataframe(df_checklist_filtrado[["Data", "Setor", "Turno", "Colaborador", "Itens_Concluidos", "Total_Itens", "Percentual_Concluido", "Observação"]].sort_values(by="Data", ascending=False))
 
-        # Botão para salvar alterações
+        # Gráfico de percentual de conclusão por setor
+        st.markdown('<div class="titulo-tabela">📈 Percentual de Itens Concluídos por Setor</div>', unsafe_allow_html=True)
+        resumo_setor = df_checklist_filtrado.groupby("Setor")["Percentual_Concluido"].mean().reset_index()
+        fig1 = px.bar(resumo_setor, x="Setor", y="Percentual_Concluido", title="Média de Conclusão por Setor (%)", text_auto=".1f", range_y=[0, 100])
+        st.plotly_chart(fig1, use_container_width=True)
+
+        # Gráfico comparativo por turno
+        st.markdown('<div class="titulo-tabela">⏰ Comparação por Turno</div>', unsafe_allow_html=True)
+        resumo_turno = df_checklist_filtrado.groupby("Turno")["Percentual_Concluido"].mean().reset_index()
+        fig2 = px.bar(resumo_turno, x="Turno", y="Percentual_Concluido", title="Média de Conclusão por Turno (%)", text_auto=".1f", range_y=[0, 100])
+        st.plotly_chart(fig2, use_container_width=True)
+
+        # Tabela consolidada de materiais
+        st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Materiais Utilizados</div>', unsafe_allow_html=True)
+        editor_df = st.data_editor(df_pivot_materiais.sort_values(by="Data", ascending=False).reset_index(drop=True), key="editor_pivot", num_rows="dynamic")
+
         if st.button("💾 Salvar Alterações no Resumo"):
-            # Desfazer pivot para salvar no formato original
             df_atualizado = editor_df.melt(id_vars=["Data", "Setor"], var_name="Item", value_name="Quantidade")
-            df_atualizado = df_atualizado[df_atualizado["Quantidade"] > 0]  # remover zeros
+            df_atualizado = df_atualizado[df_atualizado["Quantidade"] > 0]
             df_atualizado.to_csv("dados_materiais.csv", index=False)
             st.success("✅ Dados atualizados e salvos!")
 
-        # Gráfico de total de itens com rótulos
-        st.markdown('<div class="titulo-tabela">📈 Total de Itens Utilizados</div>', unsafe_allow_html=True)
-        resumo_tipo = df_filtrado.groupby("Item")["Quantidade"].sum().sort_values(ascending=False).reset_index()
-        fig1 = px.bar(resumo_tipo, x="Item", y="Quantidade", title="Total de Itens Utilizados", text_auto=True)
-        st.plotly_chart(fig1, use_container_width=True)
+        # Gráfico total de itens
+        st.markdown('<div class="titulo-tabela">📦 Total de Itens Utilizados</div>', unsafe_allow_html=True)
+        resumo_tipo = df_materiais_filtrado.groupby("Item")["Quantidade"].sum().sort_values(ascending=False).reset_index()
+        fig3 = px.bar(resumo_tipo, x="Item", y="Quantidade", title="Total de Itens Utilizados", text_auto=True)
+        st.plotly_chart(fig3, use_container_width=True)
 
-        # Gráfico Comparativo por Setor
-        st.markdown('<div class="titulo-tabela">🏢 Comparação de Itens por Setor</div>', unsafe_allow_html=True)
-        resumo_setor = df_filtrado.groupby(["Setor", "Item"])["Quantidade"].sum().reset_index()
-        fig2 = px.bar(resumo_setor, x="Setor", y="Quantidade", color="Item", barmode="group", title="Itens Utilizados por Setor", text_auto=True)
-        st.plotly_chart(fig2, use_container_width=True)
-
-    except FileNotFoundError:
-        st.warning("⚠️ Ainda não há registros armazenados.")
+    except FileNotFoundError as e:
+        st.warning(f"⚠️ Arquivo {e.filename} não encontrado. Certifique-se de salvar dados nas outras abas primeiro.")

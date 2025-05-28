@@ -26,29 +26,101 @@ def salvar_dados(df, arquivo):
 
 # === 1. Formulário de Lançamento de Materiais ===
 with tab1:
-    st.header("Lançamento de Materiais Utilizados")
+    st.header("📦 Lançamento de Materiais Utilizados")
 
     with st.form(key="form_material"):
-        data_uso = st.date_input("Data de Uso")
-        setor = st.selectbox("Setor", ["Pré-parto", "Parto", "Recuperação", "Berçário", "UTI Neonatal"])
-        produto = st.text_input("Produto Utilizado")
-        quantidade = st.number_input("Quantidade", min_value=1, step=1)
-        colaborador = st.text_input("Colaborador(a)")
-        obs = st.text_area("Observações")
+        data_uso = st.date_input("📅 Data de Uso")
+        colaborador = st.text_input("🧑 Colaborador(a) Responsável")
 
-        submit_material = st.form_submit_button("Salvar Registro")
+        # Setores
+        setores = [
+            "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
+            "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
+            "Uti Neo", "Ucinco", "Ucinca", "Uti Materna", "Ambulatório",
+            "6º Norte", "6º Sul", "7º Norte", "7º Sul", "8º Norte",
+            "8º Sul", "Subsolo", "Casa Da Gestante", "Resíduos",
+            "Nutrição", "Lactário", "Lavanderia"
+        ]
+        setor = st.selectbox("📍 Selecione o Setor", setores)
+
+        st.markdown("---")
+        st.subheader("🗂 Escolha os Itens Utilizados")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            papel_selecionado = st.selectbox("📄 Papéis", ["", "P. Bobina", "P. Higiênico", "Papel Tolha"])
+            quantidade_papel = st.number_input("Quantidade (Papéis)", min_value=0, step=1)
+
+        with col2:
+            saco_selecionado = st.selectbox("🛍️ Sacos", ["", "30p", "50p", "100p", "200p", "50b", "100b", "200b", "50v", "Ramber"])
+            quantidade_saco = st.number_input("Quantidade (Sacos)", min_value=0, step=1)
+
+        with col1:
+            sabonete_selecionado = st.selectbox("🧼 Sabonetes", ["", "Neutro", "Erva Doce", "Clorexidina", "Álcool Gel", "Álcool 70"])
+            quantidade_sabonete = st.number_input("Quantidade (Sabonetes)", min_value=0, step=1)
+
+        with col2:
+            produto_selecionado = st.selectbox("🧪 Produtos", ["", "Desinfetante", "Hipoclorito", "Peróxido", "Detergente", "Quartenário"])
+            quantidade_produto = st.number_input("Quantidade (Produtos)", min_value=0, step=1)
+
+        obs = st.text_area("📌 Observações")
+
+        submit_material = st.form_submit_button("💾 Salvar Registro")
 
         if submit_material:
-            df = pd.DataFrame({
-                "Data": [data_uso],
-                "Setor": [setor],
-                "Produto": [produto],
-                "Quantidade": [quantidade],
-                "Colaborador": [colaborador],
-                "Observação": [obs]
-            })
-            salvar_dados(df, "dados_materiais.csv")
-            st.success("✅ Registro salvo com sucesso!")
+            registros = []
+
+            if papel_selecionado and quantidade_papel > 0:
+                registros.append({
+                    "Data": data_uso,
+                    "Setor": setor,
+                    "Item": papel_selecionado,
+                    "Quantidade": quantidade_papel,
+                    "Colaborador": colaborador,
+                    "Tipo": "Papel",
+                    "Observação": obs
+                })
+
+            if saco_selecionado and quantidade_saco > 0:
+                registros.append({
+                    "Data": data_uso,
+                    "Setor": setor,
+                    "Item": saco_selecionado,
+                    "Quantidade": quantidade_saco,
+                    "Colaborador": colaborador,
+                    "Tipo": "Saco",
+                    "Observação": obs
+                })
+
+            if sabonete_selecionado and quantidade_sabonete > 0:
+                registros.append({
+                    "Data": data_uso,
+                    "Setor": setor,
+                    "Item": sabonete_selecionado,
+                    "Quantidade": quantidade_sabonete,
+                    "Colaborador": colaborador,
+                    "Tipo": "Sabonete",
+                    "Observação": obs
+                })
+
+            if produto_selecionado and quantidade_produto > 0:
+                registros.append({
+                    "Data": data_uso,
+                    "Setor": setor,
+                    "Item": produto_selecionado,
+                    "Quantidade": quantidade_produto,
+                    "Colaborador": colaborador,
+                    "Tipo": "Produto",
+                    "Observação": obs
+                })
+
+            if registros:
+                df_novo = pd.DataFrame(registros)
+                salvar_dados(df_novo, "dados_materiais.csv")
+                st.success(f"✅ {len(registros)} registro(s) salvos com sucesso!")
+            else:
+                st.warning("⚠️ Nenhum item foi selecionado ou quantidade é zero.")
 
 # === 2. Checklist de Atividades por Setor ===
 with tab2:

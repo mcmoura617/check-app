@@ -288,6 +288,42 @@ with tab3:
         st.success("✅ Checklist do carro salvo com sucesso!")
 
 # === 4. Painel de Monitoramento ===
+with tab4:
+    st.header("📊 Painel de Monitoramento")
+
+    try:
+        # Carregar dados (se existirem)
+        dfs = {}
+
+        if os.path.exists("dados_materiais.csv"):
+            dfs["materiais"] = pd.read_csv("dados_materiais.csv")
+        if os.path.exists("checklists_atividades.csv"):
+            dfs["checklist"] = pd.read_csv("checklists_atividades.csv")
+
+        # Filtro por mês
+        st.markdown('<div class="titulo-tabela">📅 Filtro por Mês</div>', unsafe_allow_html=True)
+        meses_disponiveis = ["Todos"]
+        if "materiais" in dfs:
+            dfs["materiais"]["Data"] = pd.to_datetime(dfs["materiais"]["Data"])
+            dfs["materiais"]["Mês"] = dfs["materiais"]["Data"].dt.to_period('M').astype(str)
+            meses_disponiveis += list(dfs["materiais"]["Mês"].unique())
+
+        filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_painel")
+
+        # Filtrar dados pelo mês
+        df_materiais_filtrado = dfs.get("materiais", pd.DataFrame())
+        df_checklist_filtrado = dfs.get("checklist", pd.DataFrame())
+
+        if not df_materiais_filtrado.empty and filtro_mes != "Todos":
+            df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
+
+        if not df_checklist_filtrado.empty:
+            df_checklist_filtrado["Data"] = pd.to_datetime(df_checklist_filtrado["Data"])
+            df_checklist_filtrado["Mês"] = df_checklist_filtrado["Data"].dt.to_period('M').astype(str)
+            if filtro_mes != "Todos":
+                df_checklist_filtrado = df_checklist_filtrado[df_checklist_filtrado["Mês"] == filtro_mes]
+
+        # Gráfico: Todos os Itens por Setor
         st.markdown('<div class="titulo-tabela">🧾 Todos os Itens por Setor</div>', unsafe_allow_html=True)
 
         if "materiais" in dfs:
@@ -308,7 +344,7 @@ with tab3:
         # Gráfico: Percentual Concluído no Checklist por Setor
         st.markdown('<div class="titulo-tabela">📈 Percentual de Itens Concluídos por Setor</div>', unsafe_allow_html=True)
 
-        if "checklist" in dfs:
+        if "checklist" in dfs and not df_checklist_filtrado.empty:
             colunas_itens = [col for col in df_checklist_filtrado.columns if col not in ['Data', 'Setor', 'Turno', 'Colaborador', 'Observação', 'Imagem', 'Mês']]
             df_checklist_filtrado['Itens_Concluidos'] = df_checklist_filtrado[colunas_itens].sum(axis=1)
             df_checklist_filtrado['Total_Itens'] = len(colunas_itens)
@@ -331,7 +367,7 @@ with tab3:
         else:
             st.info("ℹ️ Não há dados de checklist para exibir.")
 
-        # Gráfico: Todos os Itens por Setor
+        # Tabela consolidada - Itens como Colunas
         st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
 
         if "materiais" in dfs:
@@ -346,5 +382,5 @@ with tab3:
         else:
             st.info("ℹ️ Não há dados de materiais para exibir.")
 
-        except Exception as e:
+    except Exception as e:
         st.warning(f"⚠️ Erro ao carregar painel: {e}")

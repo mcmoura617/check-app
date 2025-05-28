@@ -257,25 +257,28 @@ with tab3:
 
 # === 4. Painel de Monitoramento ===
 with tab4:
-    st.header("📊 Resumo Operacional")
+    st.header("📊 Painel de Monitoramento")
 
     try:
+        # Carregar dados do CSV
         df_materiais = pd.read_csv("dados_materiais.csv")
-        df_atividades = pd.read_csv("checklists_atividades.csv")
-        df_carros = pd.read_csv("checklists_carros.csv")
 
-        st.subheader("Registros de Materiais")
-        st.dataframe(df_materiais.tail())
+        # Mostrar tabela com todos os registros
+        st.subheader("📋 Registros de Materiais")
+        st.dataframe(df_materiais.sort_values(by="Data", ascending=False).reset_index(drop=True))
 
-        st.subheader("Atividades Realizadas")
-        st.dataframe(df_atividades[["Data", "Setor"]].tail())
+        # Resumo por tipo de item
+        st.subheader("🧮 Resumo por Tipo de Item")
+        resumo_tipo = df_materiais.groupby("Tipo")["Quantidade"].sum().reset_index()
+        st.bar_chart(resumo_tipo.set_index("Tipo"))
 
-        st.subheader("Carros Verificados")
-        st.dataframe(df_carros[["Data", "Carro Número"]].tail())
+        # Resumo por setor
+        st.subheader("🏢 Resumo por Setor")
+        resumo_setor = df_materiais.groupby("Setor")["Quantidade"].sum().reset_index()
+        st.bar_chart(resumo_setor.set_index("Setor"))
 
-    except Exception as e:
+    except FileNotFoundError:
         st.warning("⚠️ Ainda não há registros armazenados.")
-
 
 # Rodapé
 st.sidebar.markdown("---")

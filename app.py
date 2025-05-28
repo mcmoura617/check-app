@@ -161,7 +161,6 @@ with tab4:
     except Exception as e:
         st.warning("⚠️ Ainda não há registros armazenados.")
 
----
 
 # Rodapé
 st.sidebar.markdown("---")

@@ -394,10 +394,10 @@ with tab4:
                 barmode='group',
                 title='Consumo de Produtos por Setor',
                 text_auto=True
-        )
-        st.plotly_chart(fig_produtos, use_container_width=True)
+            )
+            st.plotly_chart(fig_produtos, use_container_width=True)
         else:
-        st.info("ℹ️ Não há registros de produtos utilizados.")
+            st.info("ℹ️ Não há registros de produtos utilizados.")
 
-        except FileNotFoundError as e:
+    except FileNotFoundError as e:
         st.warning(f"⚠️ Arquivo {e.filename} não encontrado. Certifique-se de salvar dados nas outras abas primeiro.")

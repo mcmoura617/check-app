@@ -263,6 +263,10 @@ with tab4:
         # Carregar dados do CSV
         df_materiais = pd.read_csv("dados_materiais.csv")
 
+        # Converter coluna 'Data' para datetime
+        df_materiais['Data'] = pd.to_datetime(df_materiais['Data'])
+        df_materiais['Mês'] = df_materiais['Data'].dt.to_period('M').astype(str)
+
         # Aplicar estilo ao cabeçalho
         st.markdown("""
         <style>
@@ -277,34 +281,15 @@ with tab4:
         """, unsafe_allow_html=True)
 
         # Filtros interativos
-        st.markdown('<div class="titulo-tabela">🔍 Filtros</div>', unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
+        st.markdown('<div class="titulo-tabela">📅 Filtro por Mês</div>', unsafe_allow_html=True)
+        meses_disponiveis = ["Todos"] + list(df_materiais["Mês"].unique())
+        filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis)
 
-        with col1:
-            filtro_data = st.date_input("Selecione a Data", value=None)
-        with col2:
-            filtro_setor = st.selectbox("Selecione o Setor", options=["Todos"] + list(df_materiais["Setor"].unique()))
-        with col3:
-            filtro_item = st.selectbox("Selecione o Item", options=["Todos"] + list(df_materiais["Item"].unique()))
-
-        # Aplicar filtros
-        df_filtrado = df_materiais.copy()
-
-        if filtro_data:
-            df_filtrado = df_filtrado[df_filtrado["Data"] == str(filtro_data)]
-        if filtro_setor != "Todos":
-            df_filtrado = df_filtrado[df_filtrado["Setor"] == filtro_setor]
-        if filtro_item != "Todos":
-            df_filtrado = df_filtrado[df_filtrado["Item"] == filtro_item]
-
-        # Tabela Editável
-        st.markdown('<div class="titulo-tabela">📋 Registros de Materiais</div>', unsafe_allow_html=True)
-        editor_df = st.data_editor(df_filtrado.sort_values(by="Data", ascending=False).reset_index(drop=True), key="editor_1", num_rows="dynamic")
-        
-        # Salvar alterações feitas no editor (opcional)
-        if st.button("💾 Salvar Alterações"):
-            editor_df.to_csv("dados_materiais.csv", index=False)
-            st.success("✅ Alterações salvas!")
+        # Filtrar por mês
+        if filtro_mes != "Todos":
+            df_filtrado = df_materiais[df_materiais["Mês"] == filtro_mes]
+        else:
+            df_filtrado = df_materiais.copy()
 
         # Agrupamento: Itens como colunas, datas/setores como linhas
         st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
@@ -318,12 +303,31 @@ with tab4:
             fill_value=0
         ).reset_index()
 
-        st.dataframe(df_pivot)
+        # Ordenar por data (mais recente primeiro)
+        df_pivot = df_pivot.sort_values(by="Data", ascending=False).reset_index(drop=True)
 
-        # Gráfico de barras dos totais por item
+        # Tabela editável
+        editor_df = st.data_editor(df_pivot, key="editor_pivot", num_rows="dynamic")
+
+        # Botão para salvar alterações
+        if st.button("💾 Salvar Alterações no Resumo"):
+            # Desfazer pivot para salvar no formato original
+            df_atualizado = editor_df.melt(id_vars=["Data", "Setor"], var_name="Item", value_name="Quantidade")
+            df_atualizado = df_atualizado[df_atualizado["Quantidade"] > 0]  # remover zeros
+            df_atualizado.to_csv("dados_materiais.csv", index=False)
+            st.success("✅ Dados atualizados e salvos!")
+
+        # Gráfico de total de itens com rótulos
         st.markdown('<div class="titulo-tabela">📈 Total de Itens Utilizados</div>', unsafe_allow_html=True)
-        resumo_tipo = df_filtrado.groupby("Item")["Quantidade"].sum().reset_index()
-        st.bar_chart(resumo_tipo.set_index("Item"))
+        resumo_tipo = df_filtrado.groupby("Item")["Quantidade"].sum().sort_values(ascending=False).reset_index()
+        fig1 = px.bar(resumo_tipo, x="Item", y="Quantidade", title="Total de Itens Utilizados", text_auto=True)
+        st.plotly_chart(fig1, use_container_width=True)
+
+        # Gráfico Comparativo por Setor
+        st.markdown('<div class="titulo-tabela">🏢 Comparação de Itens por Setor</div>', unsafe_allow_html=True)
+        resumo_setor = df_filtrado.groupby(["Setor", "Item"])["Quantidade"].sum().reset_index()
+        fig2 = px.bar(resumo_setor, x="Setor", y="Quantidade", color="Item", barmode="group", title="Itens Utilizados por Setor", text_auto=True)
+        st.plotly_chart(fig2, use_container_width=True)
 
     except FileNotFoundError:
         st.warning("⚠️ Ainda não há registros armazenados.")

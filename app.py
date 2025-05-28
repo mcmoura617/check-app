@@ -378,15 +378,15 @@ with tab4:
         st.plotly_chart(fig3, use_container_width=True)
 
         # === Gráfico de Produtos por Setor ===
-st.markdown('<div class="titulo-tabela">🧪 Produtos Utilizados por Setor</div>', unsafe_allow_html=True)
+        st.markdown('<div class="titulo-tabela">🧪 Produtos Utilizados por Setor</div>', unsafe_allow_html=True)
 
-# Filtrar apenas produtos
-df_produtos = df_materiais_filtrado[df_materiais_filtrado['Tipo'] == 'Produto']
+        # Filtrar apenas produtos
+        df_produtos = df_materiais_filtrado[df_materiais_filtrado['Tipo'] == 'Produto']
 
-if not df_produtos.empty:
-    resumo_produtos_setor = df_produtos.groupby(['Setor', 'Item'])['Quantidade'].sum().reset_index()
+        if not df_produtos.empty:
+        resumo_produtos_setor = df_produtos.groupby(['Setor', 'Item'])['Quantidade'].sum().reset_index()
 
-    fig_produtos = px.bar(
+        fig_produtos = px.bar(
         resumo_produtos_setor,
         x='Setor',
         y='Quantidade',
@@ -394,10 +394,10 @@ if not df_produtos.empty:
         barmode='group',
         title='Consumo de Produtos por Setor',
         text_auto=True
-    )
-    st.plotly_chart(fig_produtos, use_container_width=True)
-else:
-    st.info("ℹ️ Não há registros de produtos utilizados.")
+        )
+        st.plotly_chart(fig_produtos, use_container_width=True)
+        else:
+        st.info("ℹ️ Não há registros de produtos utilizados.")
 
-    except FileNotFoundError as e:
+        except FileNotFoundError as e:
         st.warning(f"⚠️ Arquivo {e.filename} não encontrado. Certifique-se de salvar dados nas outras abas primeiro.")

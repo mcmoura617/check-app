@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import os
 from datetime import datetime
-import plotly.express as px
 
 # Configuração da página
 st.set_page_config(page_title="🏥 App Limpeza Hospitalar", layout="wide")

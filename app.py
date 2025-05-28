@@ -263,23 +263,67 @@ with tab4:
         # Carregar dados do CSV
         df_materiais = pd.read_csv("dados_materiais.csv")
 
-        # Mostrar tabela com todos os registros
-        st.subheader("📋 Registros de Materiais")
-        st.dataframe(df_materiais.sort_values(by="Data", ascending=False).reset_index(drop=True))
+        # Aplicar estilo ao cabeçalho
+        st.markdown("""
+        <style>
+        .titulo-tabela {
+            background-color: #0078D4;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
-        # Resumo por tipo de item
-        st.subheader("🧮 Resumo por Tipo de Item")
-        resumo_tipo = df_materiais.groupby("Tipo")["Quantidade"].sum().reset_index()
-        st.bar_chart(resumo_tipo.set_index("Tipo"))
+        # Filtros interativos
+        st.markdown('<div class="titulo-tabela">🔍 Filtros</div>', unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
 
-        # Resumo por setor
-        st.subheader("🏢 Resumo por Setor")
-        resumo_setor = df_materiais.groupby("Setor")["Quantidade"].sum().reset_index()
-        st.bar_chart(resumo_setor.set_index("Setor"))
+        with col1:
+            filtro_data = st.date_input("Selecione a Data", value=None)
+        with col2:
+            filtro_setor = st.selectbox("Selecione o Setor", options=["Todos"] + list(df_materiais["Setor"].unique()))
+        with col3:
+            filtro_item = st.selectbox("Selecione o Item", options=["Todos"] + list(df_materiais["Item"].unique()))
+
+        # Aplicar filtros
+        df_filtrado = df_materiais.copy()
+
+        if filtro_data:
+            df_filtrado = df_filtrado[df_filtrado["Data"] == str(filtro_data)]
+        if filtro_setor != "Todos":
+            df_filtrado = df_filtrado[df_filtrado["Setor"] == filtro_setor]
+        if filtro_item != "Todos":
+            df_filtrado = df_filtrado[df_filtrado["Item"] == filtro_item]
+
+        # Tabela Editável
+        st.markdown('<div class="titulo-tabela">📋 Registros de Materiais</div>', unsafe_allow_html=True)
+        editor_df = st.data_editor(df_filtrado.sort_values(by="Data", ascending=False).reset_index(drop=True), key="editor_1", num_rows="dynamic")
+        
+        # Salvar alterações feitas no editor (opcional)
+        if st.button("💾 Salvar Alterações"):
+            editor_df.to_csv("dados_materiais.csv", index=False)
+            st.success("✅ Alterações salvas!")
+
+        # Agrupamento: Itens como colunas, datas/setores como linhas
+        st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
+
+        # Pivot table: Linhas = Data/Setor, Colunas = Item, Valores = Quantidade
+        df_pivot = df_filtrado.pivot_table(
+            index=["Data", "Setor"],
+            columns="Item",
+            values="Quantidade",
+            aggfunc="sum",
+            fill_value=0
+        ).reset_index()
+
+        st.dataframe(df_pivot)
+
+        # Gráfico de barras dos totais por item
+        st.markdown('<div class="titulo-tabela">📈 Total de Itens Utilizados</div>', unsafe_allow_html=True)
+        resumo_tipo = df_filtrado.groupby("Item")["Quantidade"].sum().reset_index()
+        st.bar_chart(resumo_tipo.set_index("Item"))
 
     except FileNotFoundError:
         st.warning("⚠️ Ainda não há registros armazenados.")
-
-# Rodapé
-st.sidebar.markdown("---")
-st.sidebar.info("App criado para supervisão de limpeza hospitalar")

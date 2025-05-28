@@ -323,26 +323,18 @@ with tab4:
             if filtro_mes != "Todos":
                 df_checklist_filtrado = df_checklist_filtrado[df_checklist_filtrado["Mês"] == filtro_mes]
 
-        # Gráfico: Todos os Itens por Setor
-        st.markdown('<div class="titulo-tabela">🧾 Todos os Itens por Setor</div>', unsafe_allow_html=True)
+        # Gráfico: Quantidade por Itens
+        st.markdown('<div class="titulo-tabela">📦 Quantidade por Itens</div>', unsafe_allow_html=True)
 
-        if "materiais" in dfs:
-            df_geral_setor = dfs["materiais"].groupby(["Setor", "Tipo"])["Quantidade"].sum().reset_index()
-            fig_geral = px.bar(
-                df_geral_setor,
-                x='Setor',
-                y='Quantidade',
-                color='Tipo',
-                barmode='group',
-                title="Consumo Total de Materiais por Setor",
-                text_auto=True
-            )
-            st.plotly_chart(fig_geral, use_container_width=True)
+        if "materiais" in dfs and not df_materiais_filtrado.empty:
+            resumo_tipo = df_materiais_filtrado.groupby("Item")["Quantidade"].sum().sort_values(ascending=False).reset_index()
+            fig1 = px.bar(resumo_tipo, x="Item", y="Quantidade", title="Total de Itens Utilizados", text_auto=True)
+            st.plotly_chart(fig1, use_container_width=True)
         else:
-            st.info("ℹ️ Não há dados de materiais para exibir.")
+            st.info("ℹ️ Não há registros de materiais para exibir.")
 
-        # Gráfico: Percentual Concluído no Checklist por Setor
-        st.markdown('<div class="titulo-tabela">📈 Percentual de Itens Concluídos por Setor</div>', unsafe_allow_html=True)
+        # Tabela Consolidada - Checklist de Atividades
+        st.markdown('<div class="titulo-tabela">📋 Resumo Consolidado - Checklist de Atividades</div>', unsafe_allow_html=True)
 
         if "checklist" in dfs and not df_checklist_filtrado.empty:
             colunas_itens = [col for col in df_checklist_filtrado.columns if col not in ['Data', 'Setor', 'Turno', 'Colaborador', 'Observação', 'Imagem', 'Mês']]
@@ -350,37 +342,13 @@ with tab4:
             df_checklist_filtrado['Total_Itens'] = len(colunas_itens)
             df_checklist_filtrado['Percentual_Concluido'] = (df_checklist_filtrado['Itens_Concluidos'] / df_checklist_filtrado['Total_Itens']) * 100
 
-            resumo_setor = df_checklist_filtrado.groupby("Setor")["Percentual_Concluido"].mean().reset_index()
-
-            fig1 = px.bar(resumo_setor, x="Setor", y="Percentual_Concluido", title="Média de Conclusão por Setor (%)", text_auto=".1f", range_y=[0, 100])
-            st.plotly_chart(fig1, use_container_width=True)
+            # Tabela completa
+            st.dataframe(
+                df_checklist_filtrado[["Data", "Setor", "Turno", "Colaborador", "Itens_Concluidos", "Total_Itens", "Percentual_Concluido", "Observação"]],
+                use_container_width=True
+            )
         else:
-            st.info("ℹ️ Não há dados de checklist para exibir.")
-
-        # Gráfico: Comparativo por Turno
-        st.markdown('<div class="titulo-tabela">⏰ Comparação por Turno</div>', unsafe_allow_html=True)
-
-        if "checklist" in dfs and not df_checklist_filtrado.empty:
-            resumo_turno = df_checklist_filtrado.groupby("Turno")["Percentual_Concluido"].mean().reset_index()
-            fig2 = px.bar(resumo_turno, x="Turno", y="Percentual_Concluido", title="Média de Conclusão por Turno (%)", text_auto=".1f", range_y=[0, 100])
-            st.plotly_chart(fig2, use_container_width=True)
-        else:
-            st.info("ℹ️ Não há dados de checklist para exibir.")
-
-        # Tabela consolidada - Itens como Colunas
-        st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
-
-        if "materiais" in dfs:
-            df_pivot = dfs["materiais"].pivot_table(
-                index=["Data", "Setor"],
-                columns="Item",
-                values="Quantidade",
-                aggfunc="sum",
-                fill_value=0
-            ).reset_index()
-            st.dataframe(df_pivot.sort_values(by="Data", ascending=False), use_container_width=True)
-        else:
-            st.info("ℹ️ Não há dados de materiais para exibir.")
+            st.info("ℹ️ Não há registros de checklist para exibir.")
 
     except Exception as e:
         st.warning(f"⚠️ Erro ao carregar painel: {e}")

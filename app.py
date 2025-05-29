@@ -424,21 +424,34 @@ with tab4:
         else:
             st.info("ℹ️ Não há dados de materiais para exibir.")
 
-        # === NOVO: Tabela Consolidada - Checklist do Carro Funcional ===
-        st.markdown('<div class="titulo-tabela">🚚 Resumo Consolidado - Checklist do Carro Funcional</div>', unsafe_allow_html=True)
+       # === NOVO: Tabela Consolidada - Checklist do Carro Funcional ===
+st.markdown('<div class="titulo-tabela">🚚 Resumo Consolidado - Checklist do Carro Funcional</div>', unsafe_allow_html=True)
 
-        if os.path.exists("checklists_carros.csv"):
-            df_carros = pd.read_csv("checklists_carros.csv")
-            df_carros["Data"] = pd.to_datetime(df_carros["Data"])
-            df_carros["Mês"] = df_carros["Data"].dt.to_period('M').astype(str)
+if os.path.exists("checklists_carros.csv"):
+    df_carros = pd.read_csv("checklists_carros.csv")
+    df_carros["Data"] = pd.to_datetime(df_carros["Data"])
+    
+    # Adicionar mês apenas se não existir
+    if "Mês" not in df_carros.columns:
+        df_carros["Mês"] = df_carros["Data"].dt.to_period('M').astype(str)
 
-            if filtro_mes != "Todos":
-                df_carros = df_carros[df_carros["Mês"] == filtro_mes]
+    if filtro_mes != "Todos":
+        df_carros = df_carros[df_carros["Mês"] == filtro_mes]
 
-            # Mostrar tabela completa
-            st.dataframe(
-                df_carros[["Data", "Setor"] + list(df_carros.columns[2:-1]) + ["Observação"]],
-                use_container_width=True
-            )
+    # Listar colunas únicas
+    colunas_selecionadas = ["Data", "Setor", "Balde com água e sabão", "Esfregão (Lt)",
+                            "Cabo Mop Pó", "Cabo Mop Úmido", "Rodo", "Escova de vaso",
+                            "Placa de sinalização", "Pa coletora", "Carro limpo e organizado",
+                            "Observação", "Imagem"]
+
+    # Garantir que não haja duplicados
+    colunas_unicas = []
+    [colunas_unicas.append(x) for x in colunas_selecionadas if x not in colunas_unicas]
+
+    # Exibir tabela
+    st.dataframe(df_carros[colunas_unicas], use_container_width=True)
+
+else:
+    st.info("ℹ️ Não há registros de carros funcionais.")
     except Exception as e:
         st.warning(f"⚠️ Erro ao carregar painel: {e}")

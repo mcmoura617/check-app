@@ -321,7 +321,7 @@ with tab4:
             dfs["materiais"]["Mês"] = dfs["materiais"]["Data"].dt.to_period('M').astype(str)
             meses_disponiveis += list(dfs["materiais"]["Mês"].unique())
 
-        filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_painel")
+        filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_painel_checklist_carro")
 
         # Filtrar dados pelo mês
         df_materiais_filtrado = dfs.get("materiais", pd.DataFrame())
@@ -423,7 +423,8 @@ with tab4:
             st.dataframe(df_pivot.sort_values(by="Data", ascending=False), use_container_width=True)
         else:
             st.info("ℹ️ Não há dados de materiais para exibir.")
-            # === NOVO: Tabela Consolidada - Checklist do Carro Funcional ===
+
+        # === NOVO: Tabela Consolidada - Checklist do Carro Funcional ===
         st.markdown('<div class="titulo-tabela">🚚 Resumo Consolidado - Checklist do Carro Funcional</div>', unsafe_allow_html=True)
 
         if os.path.exists("checklists_carros.csv"):
@@ -431,16 +432,13 @@ with tab4:
             df_carros["Data"] = pd.to_datetime(df_carros["Data"])
             df_carros["Mês"] = df_carros["Data"].dt.to_period('M').astype(str)
 
-        if filtro_mes != "Todos":
-        df_carros = df_carros[df_carros["Mês"] == filtro_mes]
+            if filtro_mes != "Todos":
+                df_carros = df_carros[df_carros["Mês"] == filtro_mes]
 
             # Mostrar tabela completa
-        st.dataframe(
-        df_carros[["Data", "Setor"] + list(itens_carro.keys()) + ["Observação"]],
-        use_container_width=True
-            )
+            st.dataframe(df_carros[["Data", "Setor"] + list(df_carros.columns[2:-1]] + ["Observação"]], use_container_width=True)
         else:
-         st.info("ℹ️ Não há registros de carros funcionais.")
+            st.info("ℹ️ Não há registros de carros funcionais.")
 
     except Exception as e:
         st.warning(f"⚠️ Erro ao carregar painel: {e}")

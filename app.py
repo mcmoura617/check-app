@@ -303,6 +303,13 @@ with tab3:
 # === 4. Painel de Monitoramento ===
 with tab4:
     st.header("📊 Painel de Monitoramento")
+     # Inicializar variáveis do session_state para evitar erros
+    if 'filtro_mes_painel_checklist_carro' not in st.session_state:
+        st.session_state['filtro_mes_painel_checklist_carro'] = "Todos"
+    if 'filtro_setor_painel' not in st.session_state:
+        st.session_state['filtro_setor_painel'] = "Todos"
+    if 'filtro_item_painel' not in st.session_state:
+        st.session_state['filtro_item_painel'] = "Todos"
 
     try:
         # Carregar dados (se existirem)

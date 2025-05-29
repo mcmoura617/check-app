@@ -243,26 +243,33 @@ with tab2:
 
 # === 3. Checklist do Carro Funcional ===
 with tab3:
-    st.header("Checklist do Carro Funcional")
+    st.header("🚚 Checklist do Carro Funcional")
 
-    numero_carro = st.selectbox("Número do Carro", ["01", "02", "03", "04", "05"])
-    data_carro = st.date_input("Data do Checklist")
+    # Mesma lista de setores das outras abas
+    setores = [
+        "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
+        "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
+        "Uti Neo", "Ucinco", "Ucinca", "Uti Materna", "Ambulatório",
+        "6º Norte", "6º Sul", "7º Norte", "7º Sul", "8º Norte",
+        "8º Sul", "Subsolo", "Casa Da Gestante", "Resíduos",
+        "Nutrição", "Lactário", "Lavanderia"
+    ]
 
-    st.subheader("Itens do Carro")
+    data_carro = st.date_input("📅 Data do Checklist")
+    setor_carro = st.selectbox("📍 Selecione o Setor", setores)
+
+    st.subheader("🗂 Itens do Carro")
     col1, col2 = st.columns(2)
 
     itens_carro = {
         "Balde com água e sabão": False,
-        "Esfregão": False,
-        "Panôs de chão": False,
-        "Rodos e espátulas": False,
-        "Luvas descartáveis": False,
-        "Máscara e avental": False,
-        "Desinfetante pronto uso": False,
-        "Álcool gel": False,
-        "Sacos plásticos": False,
-        "Pinça para coleta": False,
-        "Bolsa de lixo contaminado": False,
+        "Esfregão (Lt)": False,
+        "Cabo Mop Pó": False,
+        "Cabo Mop Úmido": False,
+        "Rodo": False,
+        "Escova de vaso": False,
+        "Placa de sinalização": False,
+        "Pa coletora": False,
         "Carro limpo e organizado": False
     }
 
@@ -270,23 +277,29 @@ with tab3:
     for i, (item, default) in enumerate(itens_carro.items()):
         if i < len(itens_carro) // 2:
             with col1:
-                respostas_carro[item] = st.checkbox(item, key=f"c1_{i}", value=default)
+                respostas_carro[item] = st.checkbox(item, value=default, key=f"c1_{i}")
         else:
             with col2:
-                respostas_carro[item] = st.checkbox(item, key=f"c2_{i}", value=default)
+                respostas_carro[item] = st.checkbox(item, value=default, key=f"c2_{i}")
 
-    obs_carro = st.text_area("Observações do Carro")
+    obs_carro = st.text_area("📌 Observações do Carro")
 
-    if st.button("Salvar Checklist do Carro"):
+    # Upload de imagem
+    imagem_upload_carro = st.file_uploader("📷 Faça upload de uma imagem (comprovante)", type=["jpg", "jpeg", "png"], key="carro_imagem")
+
+    if st.button("💾 Salvar Checklist do Carro"):
         df = pd.DataFrame({
             "Data": [data_carro],
-            "Carro Número": [numero_carro],
+            "Setor": [setor_carro],
             **{k: [v] for k, v in respostas_carro.items()},
-            "Observação": [obs_carro]
+            "Observação": [obs_carro],
+            "Imagem": [imagem_upload_carro.name if imagem_upload_carro else None]
         })
         salvar_dados(df, "checklists_carros.csv")
         st.success("✅ Checklist do carro salvo com sucesso!")
 
+        if imagem_upload_carro:
+            st.image(imagem_upload_carro, caption="Comprovante do Carro", use_column_width=True)
 # === 4. Painel de Monitoramento ===
 with tab4:
     st.header("📊 Painel de Monitoramento")

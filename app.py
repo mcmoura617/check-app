@@ -383,75 +383,28 @@ with tab4:
         else:
             st.info("ℹ️ Não há dados de materiais para exibir.")
 
-        # === EXISTENTE: Percentual Concluído no Checklist por Setor ===
-        st.markdown('<div class="titulo-tabela">📈 Percentual de Itens Concluídos por Setor</div>', unsafe_allow_html=True)
+        # === NOVO: Tabela Consolidada - Checklist do Carro Funcional ===
+        st.markdown('<div class="titulo-tabela">🚚 Resumo Consolidado - Checklist do Carro Funcional</div>', unsafe_allow_html=True)
 
-        if "checklist" in dfs and not df_checklist_filtrado.empty:
-            colunas_itens = [col for col in df_checklist_filtrado.columns if col not in ['Data', 'Setor', 'Turno', 'Colaborador', 'Observação', 'Imagem', 'Mês']]
-            df_checklist_filtrado['Itens_Concluidos'] = df_checklist_filtrado[colunas_itens].sum(axis=1)
-            df_checklist_filtrado['Total_Itens'] = len(colunas_itens)
-            df_checklist_filtrado['Percentual_Concluido'] = (df_checklist_filtrado['Itens_Concluidos'] / df_checklist_filtrado['Total_Itens']) * 100
+        if os.path.exists("checklists_carros.csv"):
+            df_carros = pd.read_csv("checklists_carros.csv")
+            df_carros["Data"] = pd.to_datetime(df_carros["Data"])
 
-            resumo_setor = df_checklist_filtrado.groupby("Setor")["Percentual_Concluido"].mean().reset_index()
+            # Adicionar mês apenas se não existir
+            if "Mês" not in df_carros.columns:
+                df_carros["Mês"] = df_carros["Data"].dt.to_period('M').astype(str)
 
-            fig1 = px.bar(resumo_setor, x="Setor", y="Percentual_Concluido", title="Média de Conclusão por Setor (%)", text_auto=".1f", range_y=[0, 100])
-            st.plotly_chart(fig1, use_container_width=True)
+            if filtro_mes != "Todos":
+                df_carros = df_carros[df_carros["Mês"] == filtro_mes]
+
+            # Garantir que as colunas não sejam duplicadas
+            colunas_unicas = []
+            [colunas_unicas.append(x) for x in df_carros.columns.tolist() if x not in colunas_unicas and x != "Mês"]
+
+            # Exibir tabela
+            st.dataframe(df_carros[colunas_unicas], use_container_width=True)
         else:
-            st.info("ℹ️ Não há dados de checklist para exibir.")
+            st.info("ℹ️ Não há registros de carros funcionais.")
 
-        # === EXISTENTE: Comparativo por Turno ===
-        st.markdown('<div class="titulo-tabela">⏰ Comparação por Turno</div>', unsafe_allow_html=True)
-
-        if "checklist" in dfs and not df_checklist_filtrado.empty:
-            resumo_turno = df_checklist_filtrado.groupby("Turno")["Percentual_Concluido"].mean().reset_index()
-            fig2 = px.bar(resumo_turno, x="Turno", y="Percentual_Concluido", title="Média de Conclusão por Turno (%)", text_auto=".1f", range_y=[0, 100])
-            st.plotly_chart(fig2, use_container_width=True)
-        else:
-            st.info("ℹ️ Não há dados de checklist para exibir.")
-
-        # === EXISTENTE: Tabela consolidada - Itens como Colunas ===
-        st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
-
-        if "materiais" in dfs:
-            df_pivot = dfs["materiais"].pivot_table(
-                index=["Data", "Setor"],
-                columns="Item",
-                values="Quantidade",
-                aggfunc="sum",
-                fill_value=0
-            ).reset_index()
-            st.dataframe(df_pivot.sort_values(by="Data", ascending=False), use_container_width=True)
-        else:
-            st.info("ℹ️ Não há dados de materiais para exibir.")
-
-       # === NOVO: Tabela Consolidada - Checklist do Carro Funcional ===
-st.markdown('<div class="titulo-tabela">🚚 Resumo Consolidado - Checklist do Carro Funcional</div>', unsafe_allow_html=True)
-
-if os.path.exists("checklists_carros.csv"):
-    df_carros = pd.read_csv("checklists_carros.csv")
-    df_carros["Data"] = pd.to_datetime(df_carros["Data"])
-    
-    # Adicionar mês apenas se não existir
-    if "Mês" not in df_carros.columns:
-        df_carros["Mês"] = df_carros["Data"].dt.to_period('M').astype(str)
-
-    if filtro_mes != "Todos":
-        df_carros = df_carros[df_carros["Mês"] == filtro_mes]
-
-    # Listar colunas únicas
-    colunas_selecionadas = ["Data", "Setor", "Balde com água e sabão", "Esfregão (Lt)",
-                            "Cabo Mop Pó", "Cabo Mop Úmido", "Rodo", "Escova de vaso",
-                            "Placa de sinalização", "Pa coletora", "Carro limpo e organizado",
-                            "Observação", "Imagem"]
-
-    # Garantir que não haja duplicados
-    colunas_unicas = []
-    [colunas_unicas.append(x) for x in colunas_selecionadas if x not in colunas_unicas]
-
-    # Exibir tabela
-    st.dataframe(df_carros[colunas_unicas], use_container_width=True)
-
-else:
-    st.info("ℹ️ Não há registros de carros funcionais.")
     except Exception as e:
         st.warning(f"⚠️ Erro ao carregar painel: {e}")

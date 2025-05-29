@@ -436,9 +436,9 @@ with tab4:
                 df_carros = df_carros[df_carros["Mês"] == filtro_mes]
 
             # Mostrar tabela completa
-            st.dataframe(df_carros[["Data", "Setor"] + list(df_carros.columns[2:-1]] + ["Observação"]], use_container_width=True)
-        else:
-            st.info("ℹ️ Não há registros de carros funcionais.")
-
+            st.dataframe(
+                df_carros[["Data", "Setor"] + list(df_carros.columns[2:-1]) + ["Observação"]],
+                use_container_width=True
+            )
     except Exception as e:
         st.warning(f"⚠️ Erro ao carregar painel: {e}")

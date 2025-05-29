@@ -315,7 +315,7 @@ with tab4:
         if os.path.exists("checklists_carros.csv"):
             dfs["carros"] = pd.read_csv("checklists_carros.csv")
 
-        # Filtro por mês
+        # Filtro por mês, setor e item
         st.markdown('<div class="titulo-tabela">📅 Filtros</div>', unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
 
@@ -339,6 +339,7 @@ with tab4:
         df_checklist_filtrado = dfs.get("checklist", pd.DataFrame())
         df_carros_filtrado = dfs.get("carros", pd.DataFrame())
 
+        # Aplicar filtros apenas se não estiver vazio
         if not df_materiais_filtrado.empty:
             df_materiais_filtrado["Data"] = pd.to_datetime(df_materiais_filtrado["Data"])
             df_materiais_filtrado["Mês"] = df_materiais_filtrado["Data"].dt.to_period('M').astype(str)
@@ -353,14 +354,12 @@ with tab4:
         if not df_checklist_filtrado.empty:
             df_checklist_filtrado["Data"] = pd.to_datetime(df_checklist_filtrado["Data"])
             df_checklist_filtrado["Mês"] = df_checklist_filtrado["Data"].dt.to_period('M').astype(str)
-
             if filtro_mes != "Todos":
                 df_checklist_filtrado = df_checklist_filtrado[df_checklist_filtrado["Mês"] == filtro_mes]
 
         if not df_carros_filtrado.empty:
             df_carros_filtrado["Data"] = pd.to_datetime(df_carros_filtrado["Data"])
             df_carros_filtrado["Mês"] = df_carros_filtrado["Data"].dt.to_period('M').astype(str)
-
             if filtro_mes != "Todos":
                 df_carros_filtrado = df_carros_filtrado[df_carros_filtrado["Mês"] == filtro_mes]
 
@@ -437,7 +436,6 @@ with tab4:
         st.markdown('<div class="titulo-tabela">🚚 Checklist do Carro Funcional</div>', unsafe_allow_html=True)
 
         if "carros" in dfs and not df_carros_filtrado.empty:
-            # Contar itens concluídos
             cols_carro = [col for col in df_carros_filtrado.columns if col not in ['Data', 'Setor', 'Observação', 'Imagem', 'Mês']]
             df_carros_filtrado['Itens_Concluidos'] = df_carros_filtrado[cols_carro].sum(axis=1)
             df_carros_filtrado['Total_Itens'] = len(cols_carro)

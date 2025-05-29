@@ -320,45 +320,60 @@ with tab4:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            filtro_mes = st.selectbox("Selecione o Mês", options=["Todos"] + (
-                list(dfs["materiais"]["Data"].dt.to_period('M').astype(str).unique()) if "materiais" in dfs else ["Todos"]
-            ), key="filtro_mes_painel")
+            filtro_mes = st.selectbox("Selecione o Mês", options=["Todos"], key="filtro_mes_painel")
 
         with col2:
-            filtro_setor = st.selectbox("📍 Selecione o Setor", options=["Todos"] + (
-                list(dfs["materiais"]["Setor"].unique()) if "materiais" in dfs else ["Todos"]
-            ), key="filtro_setor_painel")
+            filtro_setor = st.selectbox("📍 Selecione o Setor", options=["Todos"], key="filtro_setor_painel")
 
         with col3:
-            filtro_item = st.selectbox("📦 Selecione o Item", options=["Todos"] + (
-                list(dfs["materiais"]["Item"].unique()) if "materiais" in dfs else ["Todos"]
-            ), key="filtro_item_painel")
+            filtro_item = st.selectbox("📦 Selecione o Item", options=["Todos"], key="filtro_item_painel")
 
         # Filtrar dados com base nos filtros acima
         df_materiais_filtrado = dfs.get("materiais", pd.DataFrame())
         df_checklist_filtrado = dfs.get("checklist", pd.DataFrame())
         df_carros_filtrado = dfs.get("carros", pd.DataFrame())
 
-        # Aplicar filtros apenas se não estiver vazio
+        # Processar dados de materiais
         if not df_materiais_filtrado.empty:
-            df_materiais_filtrado["Data"] = pd.to_datetime(df_materiais_filtrado["Data"])
+            df_materiais_filtrado["Data"] = pd.to_datetime(df_materiais_filtrado["Data"], errors='coerce')
+            df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Data"].notna()]
             df_materiais_filtrado["Mês"] = df_materiais_filtrado["Data"].dt.to_period('M').astype(str)
+            meses_disponiveis = ["Todos"] + list(df_materiais_filtrado["Mês"].unique())
+            filtro_mes = st.session_state.filtro_mes_painel_checklist_carro  # Use o valor salvo do selectbox anterior se quiser manter coerência
 
-            if filtro_mes != "Todos":
-                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
-            if filtro_setor != "Todos":
-                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
-            if filtro_item != "Todos":
-                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
+            if "materiais" in dfs:
+                if filtro_mes != "Todos":
+                    df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
+                if filtro_setor != "Todos":
+                    df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
+                if filtro_item != "Todos":
+                    df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
 
+            # Atualizar opções dos filtros com base nos dados filtrados
+            setores_unicos = ["Todos"] + list(df_materiais_filtrado["Setor"].unique()) if "Setor" in df_materiais_filtrado.columns else ["Todos"]
+            itens_unicos = ["Todos"] + list(df_materiais_filtrado["Item"].unique()) if "Item" in df_materiais_filtrado.columns else ["Todos"]
+
+            # Atualizar os campos do filtro
+            with col2:
+                filtro_setor = st.selectbox("📍 Selecione o Setor", options=setores_unicos, key="filtro_setor_painel_atualizado")
+            with col3:
+                filtro_item = st.selectbox("📦 Selecione o Item", options=itens_unicos, key="filtro_item_painel_atualizado")
+
+        else:
+            meses_disponiveis = ["Todos"]
+
+        # Processar checklist
         if not df_checklist_filtrado.empty:
-            df_checklist_filtrado["Data"] = pd.to_datetime(df_checklist_filtrado["Data"])
+            df_checklist_filtrado["Data"] = pd.to_datetime(df_checklist_filtrado["Data"], errors='coerce')
+            df_checklist_filtrado = df_checklist_filtrado[df_checklist_filtrado["Data"].notna()]
             df_checklist_filtrado["Mês"] = df_checklist_filtrado["Data"].dt.to_period('M').astype(str)
             if filtro_mes != "Todos":
                 df_checklist_filtrado = df_checklist_filtrado[df_checklist_filtrado["Mês"] == filtro_mes]
 
+        # Processar carros
         if not df_carros_filtrado.empty:
-            df_carros_filtrado["Data"] = pd.to_datetime(df_carros_filtrado["Data"])
+            df_carros_filtrado["Data"] = pd.to_datetime(df_carros_filtrado["Data"], errors='coerce')
+            df_carros_filtrado = df_carros_filtrado[df_carros_filtrado["Data"].notna()]
             df_carros_filtrado["Mês"] = df_carros_filtrado["Data"].dt.to_period('M').astype(str)
             if filtro_mes != "Todos":
                 df_carros_filtrado = df_carros_filtrado[df_carros_filtrado["Mês"] == filtro_mes]

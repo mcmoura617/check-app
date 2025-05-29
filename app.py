@@ -256,7 +256,7 @@ with tab3:
     ]
 
     data_carro = st.date_input("📅 Data do Checklist")
-    setor_carro = st.selectbox("📍 Selecione o Setor", setores)
+    setor_carro = st.selectbox("📍 Selecione o Setor", setores, key="carro_setor_selectbox")  # ← Adicionado key
 
     st.subheader("🗂 Itens do Carro")
     col1, col2 = st.columns(2)
@@ -287,7 +287,7 @@ with tab3:
     # Upload de imagem
     imagem_upload_carro = st.file_uploader("📷 Faça upload de uma imagem (comprovante)", type=["jpg", "jpeg", "png"], key="carro_imagem")
 
-    if st.button("💾 Salvar Checklist do Carro"):
+    if st.button("💾 Salvar Checklist do Carro", key="salvar_carro_button"):
         df = pd.DataFrame({
             "Data": [data_carro],
             "Setor": [setor_carro],

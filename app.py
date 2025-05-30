@@ -1,14 +1,38 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import os
-from datetime import datetime
+from gspread_pandas import Spread, Client
 
 # Configuração da página
 st.set_page_config(page_title="🏥 App Limpeza Hospitalar", layout="wide")
 st.title("🏥 Controle Operacional - Setor de Limpeza")
 
-# Tabs do app
+# === Funções para carregar e salvar dados no Google Sheets ===
+def conectar_planilha(sheet_name):
+    spread = Spread(sheet_name)
+    return spread
+
+def carregar_dados(sheet_name):
+    try:
+        spread = conectar_planilha(sheet_name)
+        df = spread.sheet_to_df()
+        if not df.empty:
+            if "Data" in df.columns:
+                df["Data"] = pd.to_datetime(df["Data"], errors='coerce')
+        return df
+    except Exception as e:
+        st.warning(f"⚠️ Erro ao carregar '{sheet_name}': {e}")
+        return pd.DataFrame()
+
+def salvar_dados(df, sheet_name):
+    try:
+        spread = conectar_planilha(sheet_name)
+        spread.df_to_sheet(df, index=False, sheet=sheet_name, replace=True)
+        st.success(f"✅ Dados salvos na aba '{sheet_name}'")
+    except Exception as e:
+        st.error(f"❌ Erro ao salvar na aba '{sheet_name}': {e}")
+
+# Abas do app
 tab1, tab2, tab3, tab4 = st.tabs([
     "📦 Lançamento de Materiais",
     "🧼 Checklist Atividades",
@@ -16,23 +40,13 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Painel de Monitoramento"
 ])
 
-# Função para salvar dados em CSV
-def salvar_dados(df, arquivo):
-    if not os.path.exists(arquivo):
-        df.to_csv(arquivo, index=False)
-    else:
-        df_existente = pd.read_csv(arquivo)
-        df_final = pd.concat([df_existente, df], ignore_index=True)
-        df_final.to_csv(arquivo, index=False)
-
 # === 1. Formulário de Lançamento de Materiais ===
 with tab1:
     st.header("📦 Lançamento de Materiais Utilizados")
-
+    
     with st.form(key="form_material"):
         data_uso = st.date_input("📅 Data de Uso")
-
-        # Setores
+        
         setores = [
             "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
             "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
@@ -42,9 +56,6 @@ with tab1:
             "Nutrição", "Lactário", "Lavanderia"
         ]
         setor = st.selectbox("📍 Selecione o Setor", setores)
-
-        st.markdown("---")
-        st.subheader("🗂 Itens Utilizados")
 
         # Papéis
         st.markdown("### 📄 Papéis")
@@ -95,82 +106,89 @@ with tab1:
         if submit_material:
             registros = []
 
+            def adicionar_registro(registros, item, tipo):
+                if item > 0:
+                    registros.append({
+                        "Data": data_uso,
+                        "Setor": setor,
+                        "Item": item_nome,
+                        "Quantidade": item_valor,
+                        "Tipo": tipo
+                    })
+
             # Papéis
-            if papel_bobina > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Bobina", "Quantidade": papel_bobina, "Tipo": "Papel"})
-            if papel_higienico > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "P. Higiênico", "Quantidade": papel_higienico, "Tipo": "Papel"})
-            if papel_tolha > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Papel Tolha", "Quantidade": papel_tolha, "Tipo": "Papel"})
+            for item_nome, item_valor in {
+                "P. Bobina": papel_bobina,
+                "P. Higiênico": papel_higienico,
+                "Papel Tolha": papel_tolha
+            }.items():
+                if item_valor > 0:
+                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Papel"})
 
             # Sacos
-            if saco_30p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "30p", "Quantidade": saco_30p, "Tipo": "Saco"})
-            if saco_50p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "50p", "Quantidade": saco_50p, "Tipo": "Saco"})
-            if saco_100p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "100p", "Quantidade": saco_100p, "Tipo": "Saco"})
-            if saco_200p > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "200p", "Quantidade": saco_200p, "Tipo": "Saco"})
-            if saco_50b > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "50b", "Quantidade": saco_50b, "Tipo": "Saco"})
-            if saco_100b > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "100b", "Quantidade": saco_100b, "Tipo": "Saco"})
-            if saco_200b > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "200b", "Quantidade": saco_200b, "Tipo": "Saco"})
-            if saco_50v > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "50v", "Quantidade": saco_50v, "Tipo": "Saco"})
-            if ramper > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Ramber", "Quantidade": ramper, "Tipo": "Saco"})
+            for item_nome, item_valor in {
+                "30p": saco_30p,
+                "50p": saco_50p,
+                "100p": saco_100p,
+                "200p": saco_200p,
+                "50b": saco_50b,
+                "100b": saco_100b,
+                "200b": saco_200b,
+                "50v": saco_50v,
+                "Ramber": ramper
+            }.items():
+                if item_valor > 0:
+                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Saco"})
 
             # Sabonetes
-            if sabonete_neutro > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Neutro", "Quantidade": sabonete_neutro, "Tipo": "Sabonete"})
-            if sabonete_erva_doce > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Erva Doce", "Quantidade": sabonete_erva_doce, "Tipo": "Sabonete"})
-            if sabonete_clorexidina > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Clorexidina", "Quantidade": sabonete_clorexidina, "Tipo": "Sabonete"})
-            if alcool_gel > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool Gel", "Quantidade": alcool_gel, "Tipo": "Sabonete"})
-            if alcool_70 > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Álcool 70", "Quantidade": alcool_70, "Tipo": "Sabonete"})
+            for item_nome, item_valor in {
+                "Neutro": sabonete_neutro,
+                "Erva Doce": sabonete_erva_doce,
+                "Clorexidina": sabonete_clorexidina,
+                "Álcool Gel": alcool_gel,
+                "Álcool 70": alcool_70
+            }.items():
+                if item_valor > 0:
+                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Sabonete"})
 
             # Produtos
-            if desinfetante > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Desinfetante", "Quantidade": desinfetante, "Tipo": "Produto"})
-            if hipoclorito > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Hipoclorito", "Quantidade": hipoclorito, "Tipo": "Produto"})
-            if peroxido > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Peróxido", "Quantidade": peroxido, "Tipo": "Produto"})
-            if detergente > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Detergente", "Quantidade": detergente, "Tipo": "Produto"})
-            if quartenario > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Quartenário", "Quantidade": quartenario, "Tipo": "Produto"})
+            for item_nome, item_valor in {
+                "Desinfetante": desinfetante,
+                "Hipoclorito": hipoclorito,
+                "Peróxido": peroxido,
+                "Detergente": detergente,
+                "Quartenário": quartenario
+            }.items():
+                if item_valor > 0:
+                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Produto"})
 
             # Copos
-            if copo_150ml > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "150ml", "Quantidade": copo_150ml, "Tipo": "Copo"})
-            if copo_50ml > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "50ml", "Quantidade": copo_50ml, "Tipo": "Copo"})
+            for item_nome, item_valor in {
+                "150ml": copo_150ml,
+                "50ml": copo_50ml
+            }.items():
+                if item_valor > 0:
+                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Copo"})
 
             # Mops
-            if mop_umido > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Úmido", "Quantidade": mop_umido, "Tipo": "Mop"})
-            if mop_po > 0:
-                registros.append({"Data": data_uso, "Setor": setor, "Item": "Pó", "Quantidade": mop_po, "Tipo": "Mop"})
+            for item_nome, item_valor in {
+                "Úmido": mop_umido,
+                "Pó": mop_po
+            }.items():
+                if item_valor > 0:
+                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Mop"})
 
             if registros:
                 df_novo = pd.DataFrame(registros)
-                salvar_dados(df_novo, "dados_materiais.csv")
+                salvar_dados(df_novo, "Materiais")
                 st.success(f"✅ {len(registros)} registro(s) salvos com sucesso!")
             else:
-                st.warning("⚠️ Nenhum item foi preenchido com quantidade maior que zero.")
+                st.warning("⚠️ Nenhum item foi preenchido.")
 
 # === 2. Checklist de Atividades por Setor ===
 with tab2:
     st.header("🧼 Checklist Diário de Atividades")
-
-    # Mesma lista de setores da aba Lançamento de Materiais
+    
     setores = [
         "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
         "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
@@ -181,8 +199,8 @@ with tab2:
     ]
 
     turno_opcoes = ["Manhã", "Tarde", "Noite"]
-
     col1, col2 = st.columns(2)
+    
     with col1:
         setor_checklist = st.selectbox("📍 Selecione o Setor", setores)
     with col2:
@@ -192,7 +210,6 @@ with tab2:
     colaborador = st.text_input("🧑‍🔧 Colaborador(a) Responsável")
 
     st.subheader("✅ Itens de Limpeza")
-
     coluna1, coluna2 = st.columns(2)
 
     itens = {
@@ -220,8 +237,6 @@ with tab2:
                 respostas[item] = st.checkbox(item, value=default, key=f"check_{i}_col2")
 
     obs_checklist = st.text_area("📌 Observações Gerais")
-
-    # Upload de imagem
     imagem_upload = st.file_uploader("📷 Faça upload de uma imagem (comprovante)", type=["jpg", "jpeg", "png"])
 
     if st.button("💾 Salvar Checklist"):
@@ -234,9 +249,7 @@ with tab2:
             "Observação": [obs_checklist],
             "Imagem": [imagem_upload.name if imagem_upload else None]
         })
-
-        salvar_dados(df, "checklists_atividades.csv")
-        st.success("✅ Checklist salvo com sucesso!")
+        salvar_dados(df, "Checklist_Atividades")
 
         if imagem_upload:
             st.image(imagem_upload, caption="Comprovante Enviado", use_column_width=True)
@@ -245,7 +258,6 @@ with tab2:
 with tab3:
     st.header("🚚 Checklist do Carro Funcional")
 
-    # Mesma lista de setores das outras abas
     setores = [
         "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
         "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
@@ -256,7 +268,7 @@ with tab3:
     ]
 
     data_carro = st.date_input("📅 Data do Checklist")
-    setor_carro = st.selectbox("📍 Selecione o Setor", setores, key="carro_setor_selectbox")  # ← Adicionado key
+    setor_carro = st.selectbox("📍 Selecione o Setor", setores, key="carro_setor_selectbox")
 
     st.subheader("🗂 Itens do Carro")
     col1, col2 = st.columns(2)
@@ -283,8 +295,6 @@ with tab3:
                 respostas_carro[item] = st.checkbox(item, value=default, key=f"c2_{i}")
 
     obs_carro = st.text_area("📌 Observações do Carro")
-
-    # Upload de imagem
     imagem_upload_carro = st.file_uploader("📷 Faça upload de uma imagem (comprovante)", type=["jpg", "jpeg", "png"], key="carro_imagem")
 
     if st.button("💾 Salvar Checklist do Carro", key="salvar_carro_button"):
@@ -295,123 +305,77 @@ with tab3:
             "Observação": [obs_carro],
             "Imagem": [imagem_upload_carro.name if imagem_upload_carro else None]
         })
-        salvar_dados(df, "checklists_carros.csv")
+        salvar_dados(df, "Checklist_Carros")
         st.success("✅ Checklist do carro salvo com sucesso!")
 
         if imagem_upload_carro:
             st.image(imagem_upload_carro, caption="Comprovante do Carro", use_column_width=True)
+
 # === 4. Painel de Monitoramento ===
 with tab4:
     st.header("📊 Painel de Monitoramento")
-     # Inicializar variáveis do session_state para evitar erros
-    if 'filtro_mes_painel_checklist_carro' not in st.session_state:
-        st.session_state['filtro_mes_painel_checklist_carro'] = "Todos"
-    if 'filtro_setor_painel' not in st.session_state:
-        st.session_state['filtro_setor_painel'] = "Todos"
-    if 'filtro_item_painel' not in st.session_state:
-        st.session_state['filtro_item_painel'] = "Todos"
+
+    # Inicializar variáveis do session_state para evitar erro
+    if 'filtro_mes' not in st.session_state:
+        st.session_state['filtro_mes'] = "Todos"
+    if 'filtro_setor' not in st.session_state:
+        st.session_state['filtro_setor'] = "Todos"
+    if 'filtro_item' not in st.session_state:
+        st.session_state['filtro_item'] = "Todos"
 
     try:
-        # Carregar dados (se existirem)
-        dfs = {}
-
-        if os.path.exists("dados_materiais.csv"):
-            dfs["materiais"] = pd.read_csv("dados_materiais.csv")
-        if os.path.exists("checklists_atividades.csv"):
-            dfs["checklist"] = pd.read_csv("checklists_atividades.csv")
-        if os.path.exists("checklists_carros.csv"):
-            dfs["carros"] = pd.read_csv("checklists_carros.csv")
+        # Carregar dados das planilhas
+        df_materiais = carregar_dados("Materiais")
+        df_checklist = carregar_dados("Checklist_Atividades")
+        df_carros = carregar_dados("Checklist_Carros")
 
         # Filtro por mês, setor e item
         st.markdown('<div class="titulo-tabela">📅 Filtros</div>', unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            filtro_mes = st.selectbox("Selecione o Mês", options=["Todos"], key="filtro_mes_painel")
+            meses_disponiveis = ["Todos"]
+            if not df_materiais.empty:
+                df_materiais["Data"] = pd.to_datetime(df_materiais["Data"])
+                meses_disponiveis += list(df_materiais["Data"].dt.to_period('M').astype(str).unique())
+            filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_atualizado")
 
         with col2:
-            filtro_setor = st.selectbox("📍 Selecione o Setor", options=["Todos"], key="filtro_setor_painel")
+            setores_unicos = ["Todos"] + list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
+            filtro_setor = st.selectbox("📍 Selecione o Setor", options=setores_unicos, key="filtro_setor_atualizado")
 
         with col3:
-            filtro_item = st.selectbox("📦 Selecione o Item", options=["Todos"], key="filtro_item_painel")
+            itens_unicos = ["Todos"] + list(df_materiais["Item"].unique()) if not df_materiais.empty and "Item" in df_materiais.columns else ["Todos"]
+            filtro_item = st.selectbox("📦 Selecione o Item", options=itens_unicos, key="filtro_item_atualizado")
 
-        # Filtrar dados com base nos filtros acima
-        df_materiais_filtrado = dfs.get("materiais", pd.DataFrame())
-        df_checklist_filtrado = dfs.get("checklist", pd.DataFrame())
-        df_carros_filtrado = dfs.get("carros", pd.DataFrame())
+        # Filtrar dados com base nos filtros
+        df_materiais_filtrado = df_materiais.copy()
+        df_checklist_filtrado = df_checklist.copy()
+        df_carros_filtrado = df_carros.copy()
 
-        # Processar dados de materiais
         if not df_materiais_filtrado.empty:
             df_materiais_filtrado["Data"] = pd.to_datetime(df_materiais_filtrado["Data"], errors='coerce')
             df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Data"].notna()]
             df_materiais_filtrado["Mês"] = df_materiais_filtrado["Data"].dt.to_period('M').astype(str)
-            meses_disponiveis = ["Todos"] + list(df_materiais_filtrado["Mês"].unique())
-            filtro_mes = st.session_state.filtro_mes_painel_checklist_carro  # Use o valor salvo do selectbox anterior se quiser manter coerência
 
-            if "materiais" in dfs:
-                if filtro_mes != "Todos":
-                    df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
-                if filtro_setor != "Todos":
-                    df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
-                if filtro_item != "Todos":
-                    df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
-
-            # Atualizar opções dos filtros com base nos dados filtrados
-            setores_unicos = ["Todos"] + list(df_materiais_filtrado["Setor"].unique()) if "Setor" in df_materiais_filtrado.columns else ["Todos"]
-            itens_unicos = ["Todos"] + list(df_materiais_filtrado["Item"].unique()) if "Item" in df_materiais_filtrado.columns else ["Todos"]
-
-            # Atualizar os campos do filtro
-            with col2:
-                filtro_setor = st.selectbox("📍 Selecione o Setor", options=setores_unicos, key="filtro_setor_painel_atualizado")
-            with col3:
-                filtro_item = st.selectbox("📦 Selecione o Item", options=itens_unicos, key="filtro_item_painel_atualizado")
-
-        else:
-            meses_disponiveis = ["Todos"]
-
-        # Processar checklist
-        if not df_checklist_filtrado.empty:
-            df_checklist_filtrado["Data"] = pd.to_datetime(df_checklist_filtrado["Data"], errors='coerce')
-            df_checklist_filtrado = df_checklist_filtrado[df_checklist_filtrado["Data"].notna()]
-            df_checklist_filtrado["Mês"] = df_checklist_filtrado["Data"].dt.to_period('M').astype(str)
             if filtro_mes != "Todos":
-                df_checklist_filtrado = df_checklist_filtrado[df_checklist_filtrado["Mês"] == filtro_mes]
+                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
+            if filtro_setor != "Todos":
+                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
+            if filtro_item != "Todos":
+                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
 
-        # Processar carros
-        if not df_carros_filtrado.empty:
-            df_carros_filtrado["Data"] = pd.to_datetime(df_carros_filtrado["Data"], errors='coerce')
-            df_carros_filtrado = df_carros_filtrado[df_carros_filtrado["Data"].notna()]
-            df_carros_filtrado["Mês"] = df_carros_filtrado["Data"].dt.to_period('M').astype(str)
-            if filtro_mes != "Todos":
-                df_carros_filtrado = df_carros_filtrado[df_carros_filtrado["Mês"] == filtro_mes]
-
-        # === SEÇÃO: Gráficos de Materiais ===
+        # Gráfico de quantidade por itens
         st.markdown('<div class="titulo-tabela">🧾 Materiais Utilizados</div>', unsafe_allow_html=True)
-
-        if "materiais" in dfs and not df_materiais_filtrado.empty:
-            # Gráfico de quantidade por itens
+        if not df_materiais_filtrado.empty:
             resumo_tipo = df_materiais_filtrado.groupby("Item")["Quantidade"].sum().sort_values(ascending=False).reset_index()
-            fig_item = px.bar(
-                resumo_tipo,
-                x="Item",
-                y="Quantidade",
-                title="📦 Total de Cada Item Utilizado",
-                text_auto=True
-            )
+            fig_item = px.bar(resumo_tipo, x="Item", y="Quantidade", title="📦 Total de Cada Item Utilizado", text_auto=True)
             st.plotly_chart(fig_item, use_container_width=True)
 
-            # Gráfico por setor
             resumo_setor = df_materiais_filtrado.groupby("Setor")["Quantidade"].sum().reset_index()
-            fig_setor = px.bar(
-                resumo_setor,
-                x="Setor",
-                y="Quantidade",
-                title="📍 Total de Itens por Setor",
-                text_auto=True
-            )
+            fig_setor = px.bar(resumo_setor, x="Setor", y="Quantidade", title="📍 Total de Itens por Setor", text_auto=True)
             st.plotly_chart(fig_setor, use_container_width=True)
 
-            # Tabela consolidada
             df_pivot = df_materiais_filtrado.pivot_table(
                 index=["Data", "Setor"],
                 columns="Item",
@@ -424,16 +388,14 @@ with tab4:
         else:
             st.info("ℹ️ Não há registros de materiais.")
 
-        # === SEÇÃO: Checklist de Atividades ===
+        # Checklist de atividades
         st.markdown('<div class="titulo-tabela">📋 Checklist de Atividades</div>', unsafe_allow_html=True)
-
-        if "checklist" in dfs and not df_checklist_filtrado.empty:
+        if not df_checklist_filtrado.empty:
             colunas_itens = [col for col in df_checklist_filtrado.columns if col not in ['Data', 'Setor', 'Turno', 'Colaborador', 'Observação', 'Imagem', 'Mês']]
             df_checklist_filtrado['Itens_Concluidos'] = df_checklist_filtrado[colunas_itens].sum(axis=1)
             df_checklist_filtrado['Total_Itens'] = len(colunas_itens)
             df_checklist_filtrado['Percentual_Concluido'] = (df_checklist_filtrado['Itens_Concluidos'] / df_checklist_filtrado['Total_Itens']) * 100
 
-            # Gráfico por setor
             resumo_setor_check = df_checklist_filtrado.groupby("Setor")["Percentual_Concluido"].mean().reset_index()
             fig_check_setor = px.bar(
                 resumo_setor_check,
@@ -445,25 +407,20 @@ with tab4:
             )
             st.plotly_chart(fig_check_setor, use_container_width=True)
 
-            # Tabela completa
             st.markdown('<div class="titulo-tabela">📌 Registros do Checklist de Atividades</div>', unsafe_allow_html=True)
-            st.dataframe(
-                df_checklist_filtrado[["Data", "Setor", "Turno", "Colaborador", "Itens_Concluidos", "Total_Itens", "Percentual_Concluido", "Observação"]],
-                use_container_width=True
-            )
+            st.dataframe(df_checklist_filtrado[["Data", "Setor", "Turno", "Colaborador", "Observação"]], use_container_width=True)
+
         else:
             st.info("ℹ️ Não há registros de checklist de atividades.")
 
-        # === SEÇÃO: Checklist do Carro Funcional ===
+        # Checklist de carros
         st.markdown('<div class="titulo-tabela">🚚 Checklist do Carro Funcional</div>', unsafe_allow_html=True)
-
-        if "carros" in dfs and not df_carros_filtrado.empty:
+        if not df_carros_filtrado.empty:
             cols_carro = [col for col in df_carros_filtrado.columns if col not in ['Data', 'Setor', 'Observação', 'Imagem', 'Mês']]
             df_carros_filtrado['Itens_Concluidos'] = df_carros_filtrado[cols_carro].sum(axis=1)
             df_carros_filtrado['Total_Itens'] = len(cols_carro)
             df_carros_filtrado['Percentual_Concluido'] = (df_carros_filtrado['Itens_Concluidos'] / df_carros_filtrado['Total_Itens']) * 100
 
-            # Gráfico por carro
             resumo_carro_setor = df_carros_filtrado.groupby("Setor")["Percentual_Concluido"].mean().reset_index()
             fig_carro_setor = px.bar(
                 resumo_carro_setor,
@@ -475,12 +432,9 @@ with tab4:
             )
             st.plotly_chart(fig_carro_setor, use_container_width=True)
 
-            # Tabela completa
             st.markdown('<div class="titulo-tabela">📝 Registros do Checklist dos Carros</div>', unsafe_allow_html=True)
-            st.dataframe(
-                df_carros_filtrado[["Data", "Setor"] + cols_carro + ["Observação"]],
-                use_container_width=True
-            )
+            st.dataframe(df_carros_filtrado[["Data", "Setor", "Observação"]], use_container_width=True)
+
         else:
             st.info("ℹ️ Não há registros de carros funcionais.")
 

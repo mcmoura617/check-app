@@ -2,37 +2,55 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from gspread_pandas import Spread, Client
+from google.oauth2.service_account import Credentials
+import gspread_pandas as gp
 
-# Configuração da página
+# === Configuração da página ===
 st.set_page_config(page_title="🏥 App Limpeza Hospitalar", layout="wide")
 st.title("🏥 Controle Operacional - Setor de Limpeza")
 
-# === Funções para carregar e salvar dados no Google Sheets ===
-def conectar_planilha(sheet_name):
-    spread = Spread(sheet_name)
-    return spread
-
-def carregar_dados(sheet_name):
+# === Funções para carregar e salvar no Google Sheets ===
+def conectar_planilha(sheet_name="Materiais"):
     try:
-        spread = conectar_planilha(sheet_name)
-        df = spread.sheet_to_df()
-        if not df.empty:
-            if "Data" in df.columns:
-                df["Data"] = pd.to_datetime(df["Data"], errors='coerce')
-        return df
+        scope = ['https://spreadsheets.google.com/feeds ', 'https://www.googleapis.com/auth/drive ']
+        credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+        client = gp.Client(creds=credentials)
+        return Spread(sheet_name, client=client)
     except Exception as e:
-        st.warning(f"⚠️ Erro ao carregar '{sheet_name}': {e}")
-        return pd.DataFrame()
+        st.error(f"❌ Erro ao conectar à planilha '{sheet_name}': {e}")
+        return None
 
-def salvar_dados(df, sheet_name):
-    try:
-        spread = conectar_planilha(sheet_name)
-        spread.df_to_sheet(df, index=False, sheet=sheet_name, replace=True)
-        st.success(f"✅ Dados salvos na aba '{sheet_name}'")
-    except Exception as e:
-        st.error(f"❌ Erro ao salvar na aba '{sheet_name}': {e}")
 
-# Abas do app
+def carregar_da_planilha(sheet_name="Materiais"):
+    spread = conectar_planilha(sheet_name)
+    if spread:
+        try:
+            df = spread.sheet_to_df()
+            if not df.empty:
+                st.success(f"✅ Dados carregados da aba '{sheet_name}'")
+            else:
+                st.info(f"ℹ️ Aba '{sheet_name}' está vazia.")
+            return df
+        except Exception as e:
+            st.warning(f"⚠️ Erro ao carregar '{sheet_name}': {e}")
+    return pd.DataFrame()
+
+
+def salvar_no_sheets(df, sheet_name="Materiais"):
+    if df.empty:
+        st.warning(f"⚠️ Nenhum dado para salvar na aba '{sheet_name}'")
+        return
+
+    spread = conectar_planilha(sheet_name)
+    if spread:
+        try:
+            spread.df_to_sheet(df, sheet=sheet_name, index=False, replace=True)
+            st.success(f"✅ Dados salvos na aba '{sheet_name}'")
+        except Exception as e:
+            st.error(f"❌ Erro ao salvar na aba '{sheet_name}': {e}")
+
+
+# === Tabs do app ===
 tab1, tab2, tab3, tab4 = st.tabs([
     "📦 Lançamento de Materiais",
     "🧼 Checklist Atividades",
@@ -40,13 +58,13 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Painel de Monitoramento"
 ])
 
-# === 1. Formulário de Lançamento de Materiais ===
+# === 1. Lançamento de Materiais ===
 with tab1:
     st.header("📦 Lançamento de Materiais Utilizados")
     
     with st.form(key="form_material"):
         data_uso = st.date_input("📅 Data de Uso")
-        
+
         setores = [
             "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
             "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
@@ -55,15 +73,13 @@ with tab1:
             "8º Sul", "Subsolo", "Casa Da Gestante", "Resíduos",
             "Nutrição", "Lactário", "Lavanderia"
         ]
-        setor = st.selectbox("📍 Selecione o Setor", setores)
+        setor = st.selectbox("📍 Selecione o Setor", options=setores)
 
-        # Papéis
         st.markdown("### 📄 Papéis")
         papel_bobina = st.number_input("P. Bobina", min_value=0, step=1, key="p_bobina")
         papel_higienico = st.number_input("P. Higiênico", min_value=0, step=1, key="p_higienico")
         papel_tolha = st.number_input("Papel Tolha", min_value=0, step=1, key="p_tolha")
 
-        # Sacos
         st.markdown("### 🛍️ Sacos")
         saco_30p = st.number_input("30p", min_value=0, step=1, key="saco_30p")
         saco_50p = st.number_input("50p", min_value=0, step=1, key="saco_50p")
@@ -75,7 +91,6 @@ with tab1:
         saco_50v = st.number_input("50v", min_value=0, step=1, key="saco_50v")
         ramper = st.number_input("Ramber", min_value=0, step=1, key="ramper")
 
-        # Sabonetes
         st.markdown("### 🧼 Sabonetes")
         sabonete_neutro = st.number_input("Neutro", min_value=0, step=1, key="sabonete_neutro")
         sabonete_erva_doce = st.number_input("Erva Doce", min_value=0, step=1, key="sabonete_erva_doce")
@@ -83,7 +98,6 @@ with tab1:
         alcool_gel = st.number_input("Álcool Gel", min_value=0, step=1, key="alcool_gel")
         alcool_70 = st.number_input("Álcool 70", min_value=0, step=1, key="alcool_70")
 
-        # Produtos
         st.markdown("### 🧴 Produtos")
         desinfetante = st.number_input("Desinfetante", min_value=0, step=1, key="desinfetante")
         hipoclorito = st.number_input("Hipoclorito", min_value=0, step=1, key="hipoclorito")
@@ -91,12 +105,10 @@ with tab1:
         detergente = st.number_input("Detergente", min_value=0, step=1, key="detergente")
         quartenario = st.number_input("Quartenário", min_value=0, step=1, key="quartenario")
 
-        # Copos
         st.markdown("### 🥤 Copos")
         copo_150ml = st.number_input("150ml", min_value=0, step=1, key="copo_150ml")
         copo_50ml = st.number_input("50ml", min_value=0, step=1, key="copo_50ml")
 
-        # Mops
         st.markdown("### 🧹 Mops")
         mop_umido = st.number_input("Úmido", min_value=0, step=1, key="mop_umido")
         mop_po = st.number_input("Pó", min_value=0, step=1, key="mop_po")
@@ -106,82 +118,52 @@ with tab1:
         if submit_material:
             registros = []
 
-            def adicionar_registro(registros, item, tipo):
-                if item > 0:
+            def adicionar_registro(item_nome, quantidade, tipo):
+                if quantidade > 0:
                     registros.append({
-                        "Data": data_uso,
+                        "Data": str(data_uso),
                         "Setor": setor,
                         "Item": item_nome,
-                        "Quantidade": item_valor,
+                        "Quantidade": quantidade,
                         "Tipo": tipo
                     })
 
-            # Papéis
-            for item_nome, item_valor in {
-                "P. Bobina": papel_bobina,
-                "P. Higiênico": papel_higienico,
-                "Papel Tolha": papel_tolha
-            }.items():
-                if item_valor > 0:
-                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Papel"})
+            # Adicionar itens
+            adicionar_registro("P. Bobina", papel_bobina, "Papel")
+            adicionar_registro("P. Higiênico", papel_higienico, "Papel")
+            adicionar_registro("Papel Tolha", papel_tolha, "Papel")
 
-            # Sacos
-            for item_nome, item_valor in {
-                "30p": saco_30p,
-                "50p": saco_50p,
-                "100p": saco_100p,
-                "200p": saco_200p,
-                "50b": saco_50b,
-                "100b": saco_100b,
-                "200b": saco_200b,
-                "50v": saco_50v,
-                "Ramber": ramper
-            }.items():
-                if item_valor > 0:
-                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Saco"})
+            adicionar_registro("30p", saco_30p, "Saco")
+            adicionar_registro("50p", saco_50p, "Saco")
+            adicionar_registro("100p", saco_100p, "Saco")
+            adicionar_registro("200p", saco_200p, "Saco")
+            adicionar_registro("50b", saco_50b, "Saco")
+            adicionar_registro("100b", saco_100b, "Saco")
+            adicionar_registro("200b", saco_200b, "Saco")
+            adicionar_registro("50v", saco_50v, "Saco")
+            adicionar_registro("Ramber", ramper, "Saco")
 
-            # Sabonetes
-            for item_nome, item_valor in {
-                "Neutro": sabonete_neutro,
-                "Erva Doce": sabonete_erva_doce,
-                "Clorexidina": sabonete_clorexidina,
-                "Álcool Gel": alcool_gel,
-                "Álcool 70": alcool_70
-            }.items():
-                if item_valor > 0:
-                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Sabonete"})
+            adicionar_registro("Neutro", sabonete_neutro, "Sabonete")
+            adicionar_registro("Erva Doce", sabonete_erva_doce, "Sabonete")
+            adicionar_registro("Clorexidina", sabonete_clorexidina, "Sabonete")
+            adicionar_registro("Álcool Gel", alcool_gel, "Sabonete")
+            adicionar_registro("Álcool 70", alcool_70, "Sabonete")
 
-            # Produtos
-            for item_nome, item_valor in {
-                "Desinfetante": desinfetante,
-                "Hipoclorito": hipoclorito,
-                "Peróxido": peroxido,
-                "Detergente": detergente,
-                "Quartenário": quartenario
-            }.items():
-                if item_valor > 0:
-                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Produto"})
+            adicionar_registro("Desinfetante", desinfetante, "Produto")
+            adicionar_registro("Hipoclorito", hipoclorito, "Produto")
+            adicionar_registro("Peróxido", peroxido, "Produto")
+            adicionar_registro("Detergente", detergente, "Produto")
+            adicionar_registro("Quartenário", quartenario, "Produto")
 
-            # Copos
-            for item_nome, item_valor in {
-                "150ml": copo_150ml,
-                "50ml": copo_50ml
-            }.items():
-                if item_valor > 0:
-                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Copo"})
+            adicionar_registro("150ml", copo_150ml, "Copo")
+            adicionar_registro("50ml", copo_50ml, "Copo")
 
-            # Mops
-            for item_nome, item_valor in {
-                "Úmido": mop_umido,
-                "Pó": mop_po
-            }.items():
-                if item_valor > 0:
-                    registros.append({"Data": data_uso, "Setor": setor, "Item": item_nome, "Quantidade": item_valor, "Tipo": "Mop"})
+            adicionar_registro("Úmido", mop_umido, "Mop")
+            adicionar_registro("Pó", mop_po, "Mop")
 
             if registros:
                 df_novo = pd.DataFrame(registros)
-                salvar_dados(df_novo, "Materiais")
-                st.success(f"✅ {len(registros)} registro(s) salvos com sucesso!")
+                salvar_no_sheets(df_novo, "Materiais")
             else:
                 st.warning("⚠️ Nenhum item foi preenchido.")
 
@@ -197,10 +179,9 @@ with tab2:
         "8º Sul", "Subsolo", "Casa Da Gestante", "Resíduos",
         "Nutrição", "Lactário", "Lavanderia"
     ]
-
     turno_opcoes = ["Manhã", "Tarde", "Noite"]
+
     col1, col2 = st.columns(2)
-    
     with col1:
         setor_checklist = st.selectbox("📍 Selecione o Setor", setores)
     with col2:
@@ -208,8 +189,8 @@ with tab2:
 
     data_checklist = st.date_input("📅 Data da Atividade")
     colaborador = st.text_input("🧑‍🔧 Colaborador(a) Responsável")
+    st.subheader("🗂 Itens de Limpeza")
 
-    st.subheader("✅ Itens de Limpeza")
     coluna1, coluna2 = st.columns(2)
 
     itens = {
@@ -224,24 +205,24 @@ with tab2:
         "Lixeiras higienizadas": False,
         "Portas e maçanetas limpas": False,
         "Banheiros limpos e abastecidos": False,
-        "EPI's utilizados corretamente": False,
+        "EPI's utilizados corretamente": False
     }
 
     respostas = {}
     for i, (item, default) in enumerate(itens.items()):
         if i < len(itens) // 2:
             with coluna1:
-                respostas[item] = st.checkbox(item, value=default, key=f"check_{i}")
+                respostas[item] = st.checkbox(item, value=default, key=f"c_{i}_check")
         else:
             with coluna2:
-                respostas[item] = st.checkbox(item, value=default, key=f"check_{i}_col2")
+                respostas[item] = st.checkbox(item, value=default, key=f"c_{i}_col2_check")
 
     obs_checklist = st.text_area("📌 Observações Gerais")
     imagem_upload = st.file_uploader("📷 Faça upload de uma imagem (comprovante)", type=["jpg", "jpeg", "png"])
 
     if st.button("💾 Salvar Checklist"):
         df = pd.DataFrame({
-            "Data": [data_checklist],
+            "Data": [str(data_checklist)],
             "Setor": [setor_checklist],
             "Turno": [turno],
             "Colaborador": [colaborador],
@@ -249,8 +230,7 @@ with tab2:
             "Observação": [obs_checklist],
             "Imagem": [imagem_upload.name if imagem_upload else None]
         })
-        salvar_dados(df, "Checklist_Atividades")
-
+        salvar_no_sheets(df, "Checklist_Atividades")
         if imagem_upload:
             st.image(imagem_upload, caption="Comprovante Enviado", use_column_width=True)
 
@@ -258,17 +238,9 @@ with tab2:
 with tab3:
     st.header("🚚 Checklist do Carro Funcional")
 
-    setores = [
-        "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
-        "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
-        "Uti Neo", "Ucinco", "Ucinca", "Uti Materna", "Ambulatório",
-        "6º Norte", "6º Sul", "7º Norte", "7º Sul", "8º Norte",
-        "8º Sul", "Subsolo", "Casa Da Gestante", "Resíduos",
-        "Nutrição", "Lactário", "Lavanderia"
-    ]
-
+    setores_carro = setores.copy()
     data_carro = st.date_input("📅 Data do Checklist")
-    setor_carro = st.selectbox("📍 Selecione o Setor", setores, key="carro_setor_selectbox")
+    setor_carro = st.selectbox("📍 Selecione o Setor", setores_carro, key="carro_setor_selectbox")
 
     st.subheader("🗂 Itens do Carro")
     col1, col2 = st.columns(2)
@@ -299,15 +271,13 @@ with tab3:
 
     if st.button("💾 Salvar Checklist do Carro", key="salvar_carro_button"):
         df = pd.DataFrame({
-            "Data": [data_carro],
+            "Data": [str(data_carro)],
             "Setor": [setor_carro],
             **{k: [v] for k, v in respostas_carro.items()},
             "Observação": [obs_carro],
             "Imagem": [imagem_upload_carro.name if imagem_upload_carro else None]
         })
-        salvar_dados(df, "Checklist_Carros")
-        st.success("✅ Checklist do carro salvo com sucesso!")
-
+        salvar_no_sheets(df, "Checklist_Carros")
         if imagem_upload_carro:
             st.image(imagem_upload_carro, caption="Comprovante do Carro", use_column_width=True)
 
@@ -315,55 +285,44 @@ with tab3:
 with tab4:
     st.header("📊 Painel de Monitoramento")
 
-    # Inicializar variáveis do session_state para evitar erro
-    if 'filtro_mes' not in st.session_state:
-        st.session_state['filtro_mes'] = "Todos"
-    if 'filtro_setor' not in st.session_state:
-        st.session_state['filtro_setor'] = "Todos"
-    if 'filtro_item' not in st.session_state:
-        st.session_state['filtro_item'] = "Todos"
-
     try:
+        # Inicializar session_state se não existir
+        if 'filtro_mes' not in st.session_state:
+            st.session_state['filtro_mes'] = "Todos"
+        if 'filtro_setor' not in st.session_state:
+            st.session_state['filtro_setor'] = "Todos"
+
         # Carregar dados das planilhas
-        df_materiais = carregar_dados("Materiais")
-        df_checklist = carregar_dados("Checklist_Atividades")
-        df_carros = carregar_dados("Checklist_Carros")
+        df_materiais = carregar_da_planilha("Materiais")
+        df_checklist = carregar_da_planilha("Checklist_Atividades")
+        df_carros = carregar_da_planilha("Checklist_Carros")
 
-        # Filtro por mês, setor e item
-        st.markdown('<div class="titulo-tabela">📅 Filtros</div>', unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
+        # Filtros interativos
+        st.markdown('<div class="titulo-tabela">📅 Filtro por Mês</div>', unsafe_allow_html=True)
+        meses_disponiveis = ["Todos"]
+        if not df_materiais.empty and "Data" in df_materiais.columns:
+            df_materiais["Data"] = pd.to_datetime(df_materiais["Data"])
+            df_materiais["Mês"] = df_materiais["Data"].dt.to_period('M').astype(str)
+            meses_disponiveis += list(df_materiais["Mês"].unique())
 
-        with col1:
-            meses_disponiveis = ["Todos"]
-            if not df_materiais.empty:
-                df_materiais["Data"] = pd.to_datetime(df_materiais["Data"])
-                meses_disponiveis += list(df_materiais["Data"].dt.to_period('M').astype(str).unique())
-            filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_atualizado")
+        filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_atualizado")
+        filtro_setor = st.selectbox("📍 Filtrar por Setor", options=["Todos"] + (
+            list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
+        ), key="filtro_setor_atualizado")
 
-        with col2:
-            setores_unicos = ["Todos"] + list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
-            filtro_setor = st.selectbox("📍 Selecione o Setor", options=setores_unicos, key="filtro_setor_atualizado")
+        st.session_state.filtro_mes = filtro_mes
+        st.session_state.filtro_setor = filtro_setor
 
-        with col3:
-            itens_unicos = ["Todos"] + list(df_materiais["Item"].unique()) if not df_materiais.empty and "Item" in df_materiais.columns else ["Todos"]
-            filtro_item = st.selectbox("📦 Selecione o Item", options=itens_unicos, key="filtro_item_atualizado")
-
-        # Filtrar dados com base nos filtros
+        # Aplicar filtros
         df_materiais_filtrado = df_materiais.copy()
         df_checklist_filtrado = df_checklist.copy()
         df_carros_filtrado = df_carros.copy()
 
         if not df_materiais_filtrado.empty:
-            df_materiais_filtrado["Data"] = pd.to_datetime(df_materiais_filtrado["Data"], errors='coerce')
-            df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Data"].notna()]
-            df_materiais_filtrado["Mês"] = df_materiais_filtrado["Data"].dt.to_period('M').astype(str)
-
             if filtro_mes != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
             if filtro_setor != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
-            if filtro_item != "Todos":
-                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
 
         # Gráfico de quantidade por itens
         st.markdown('<div class="titulo-tabela">🧾 Materiais Utilizados</div>', unsafe_allow_html=True)
@@ -386,7 +345,7 @@ with tab4:
             st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
             st.dataframe(df_pivot.sort_values(by="Data", ascending=False), use_container_width=True)
         else:
-            st.info("ℹ️ Não há registros de materiais.")
+            st.info("ℹ️ Não há dados de materiais para exibir.")
 
         # Checklist de atividades
         st.markdown('<div class="titulo-tabela">📋 Checklist de Atividades</div>', unsafe_allow_html=True)
@@ -409,7 +368,6 @@ with tab4:
 
             st.markdown('<div class="titulo-tabela">📌 Registros do Checklist de Atividades</div>', unsafe_allow_html=True)
             st.dataframe(df_checklist_filtrado[["Data", "Setor", "Turno", "Colaborador", "Observação"]], use_container_width=True)
-
         else:
             st.info("ℹ️ Não há registros de checklist de atividades.")
 
@@ -433,8 +391,7 @@ with tab4:
             st.plotly_chart(fig_carro_setor, use_container_width=True)
 
             st.markdown('<div class="titulo-tabela">📝 Registros do Checklist dos Carros</div>', unsafe_allow_html=True)
-            st.dataframe(df_carros_filtrado[["Data", "Setor", "Observação"]], use_container_width=True)
-
+            st.dataframe(df_carros_filtrado[["Data", "Setor"] + cols_carro + ["Observação"]], use_container_width=True)
         else:
             st.info("ℹ️ Não há registros de carros funcionais.")
 

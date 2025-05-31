@@ -1,91 +1,70 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from gspread_pandas import Spread
+from gspread_pandas import Spread, Client
 from google.oauth2.service_account import Credentials
-import gspread
-
 
 # === Configuração da página ===
 st.set_page_config(page_title="🏥 App Limpeza Hospitalar", layout="wide")
 st.title("🏥 Controle Operacional - Setor de Limpeza")
 
-
-# === Botão de teste de conexão (na sidebar) ===
-with st.sidebar:
-    st.markdown("🔧 **Ferramentas de Depuração**")
-    if st.button("🔌 Testar Conexão com Google Sheets"):
-        try:
-            scope = ['https://spreadsheets.google.com/feeds', 
-                     'https://www.googleapis.com/auth/drive'] 
-            credentials = Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"], scopes=scope)
-
-            # Testar autenticação com gspread
-            import gspread
-            gc = gspread.authorize(credentials)
-            spreadsheets = gc.list_spreadsheet_files()
-            
-            st.success("✅ Autenticado no Google Sheets")
-            if spreadsheets:
-                st.write("📄 Planilhas disponíveis:")
-                st.write([s['name'] for s in spreadsheets])
-            else:
-                st.info("ℹ️ Nenhuma planilha encontrada.")
-
-            # Testar acesso à planilha específica
-            try:
-                spreadsheet = gc.open("Controle Limpeza Hospitalar")
-                sheets_list = [ws.title for ws in spreadsheet.worksheets()]
-                st.write("📎 Abas existentes na planilha:")
-                st.write(sheets_list)
-            except gspread.exceptions.SpreadsheetNotFound:
-                st.error("❌ Planilha 'Controle Limpeza Hospitalar' não encontrada.")
-
-        except Exception as e:
-            st.error(f"❌ Erro na conexão: {e}")
-
-
 # === Funções para carregar e salvar no Google Sheets ===
 def conectar_planilha(sheet_name="Materiais"):
     try:
         scope = [
-            'https://spreadsheets.google.com/feeds',  
-            'https://www.googleapis.com/auth/drive',  
-            'https://www.googleapis.com/auth/spreadsheets'  
+            'https://spreadsheets.google.com/feeds', 
+            'https://www.googleapis.com/auth/drive', 
+            'https://www.googleapis.com/auth/spreadsheets' 
         ]
-        credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
-
-        # Usando gspread diretamente para maior controle
-        import gspread
-        gc = gspread.authorize(credentials)
+        credentials = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=scope)
+        client = Client(creds=credentials)
 
         # Nome da planilha principal
         spreadsheet_name = "Controle Limpeza Hospitalar"
 
-        # Abrir planilha
-        try:
-            spreadsheet = gc.open(spreadsheet_name)
-        except gspread.exceptions.SpreadsheetNotFound:
-            st.error(f"❌ Planilha '{spreadsheet_name}' não encontrada. Crie-a manualmente e compartilhe com a conta de serviço.")
-            return None
+        # Conectar à planilha
+        spread = Spread(spreadsheet_name, client=client)
 
-        # Verificar se aba existe
-        sheets_in_spreadsheet = [ws.title for ws in spreadsheet.worksheets()]
-
-        if sheet_name not in sheets_in_spreadsheet:
+        # Se a aba não existir, criar automaticamente
+        if sheet_name not in spread.sheets:
             st.warning(f"⚠️ Aba '{sheet_name}' não encontrada. Criando nova aba...")
-            spreadsheet.add_worksheet(title=sheet_name, rows="1000", cols="20")
+            spread.create_sheet(sheet_name)
 
-        # Retornar Spread (gspread_pandas) apenas com credenciais e nome da aba
-        from gspread_pandas import Spread
-        spread = Spread(spreadsheet.id, worksheet=sheet_name, creds=credentials)
         return spread
-
     except Exception as e:
         st.error(f"❌ Erro ao conectar à planilha: {e}")
         st.info("💡 Dica: Verifique se você ativou as APIs do Google Sheets e Drive no Google Cloud Console.")
         return None
+
+
+def carregar_da_planilha(sheet_name="Materiais"):
+    spread = conectar_planilha(sheet_name)
+    if spread:
+        try:
+            df = spread.sheet_to_df(sheet=sheet_name)
+            if not df.empty:
+                st.success(f"✅ Dados carregados da aba '{sheet_name}'")
+            else:
+                st.info(f"ℹ️ Aba '{sheet_name}' está vazia.")
+            return df
+        except Exception as e:
+            st.warning(f"⚠️ Erro ao carregar '{sheet_name}': {e}")
+    return pd.DataFrame()
+
+
+def salvar_no_sheets(df, sheet_name="Materiais"):
+    if df.empty:
+        st.warning(f"⚠️ Nenhum dado para salvar na aba '{sheet_name}'")
+        return
+    spread = conectar_planilha(sheet_name)
+    if spread:
+        try:
+            spread.df_to_sheet(df, sheet=sheet_name, index=False, replace=True)
+            st.success(f"✅ Dados salvos na aba '{sheet_name}'")
+        except Exception as e:
+            st.error(f"❌ Erro ao salvar na aba '{sheet_name}': {e}")
+
 
 # === Tabs do app ===
 tab1, tab2, tab3, tab4 = st.tabs([
@@ -94,7 +73,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🚚 Checklist Carro Funcional",
     "📊 Painel de Monitoramento"
 ])
-
 
 # === 1. Lançamento de Materiais ===
 with tab1:
@@ -192,7 +170,6 @@ with tab1:
             else:
                 st.warning("⚠️ Nenhum item foi preenchido.")
 
-
 # === 2. Checklist de Atividades por Setor ===
 with tab2:
     st.header("🧼 Checklist Diário de Atividades")
@@ -252,7 +229,6 @@ with tab2:
         if imagem_upload:
             st.image(imagem_upload, caption="Comprovante Enviado", use_column_width=True)
 
-
 # === 3. Checklist do Carro Funcional ===
 with tab3:
     st.header("🚚 Checklist do Carro Funcional")
@@ -293,7 +269,6 @@ with tab3:
         salvar_no_sheets(df, "Checklist_Carros")
         if imagem_upload_carro:
             st.image(imagem_upload_carro, caption="Comprovante do Carro", use_column_width=True)
-
 
 # === 4. Painel de Monitoramento ===
 with tab4:

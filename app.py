@@ -61,10 +61,8 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # === 1. Lançamento de Materiais ===
 with tab1:
     st.header("📦 Lançamento de Materiais Utilizados")
-    
     with st.form(key="form_material"):
         data_uso = st.date_input("📅 Data de Uso")
-
         setores = [
             "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
             "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
@@ -179,18 +177,20 @@ with tab2:
         "8º Sul", "Subsolo", "Casa Da Gestante", "Resíduos",
         "Nutrição", "Lactário", "Lavanderia"
     ]
-    turno_opcoes = ["Manhã", "Tarde", "Noite"]
 
+    turno_opcoes = ["Manhã", "Tarde", "Noite"]
     col1, col2 = st.columns(2)
+
     with col1:
         setor_checklist = st.selectbox("📍 Selecione o Setor", setores)
+
     with col2:
         turno = st.selectbox("⏰ Selecione o Turno", turno_opcoes)
 
     data_checklist = st.date_input("📅 Data da Atividade")
     colaborador = st.text_input("🧑‍🔧 Colaborador(a) Responsável")
-    st.subheader("🗂 Itens de Limpeza")
 
+    st.subheader("🗂 Itens de Limpeza")
     coluna1, coluna2 = st.columns(2)
 
     itens = {
@@ -220,7 +220,7 @@ with tab2:
     obs_checklist = st.text_area("📌 Observações Gerais")
     imagem_upload = st.file_uploader("📷 Faça upload de uma imagem (comprovante)", type=["jpg", "jpeg", "png"])
 
-    if st.button("💾 Salvar Checklist"):
+    if st.button("💾 Salvar Checklist", key="salvar_checklist"):
         df = pd.DataFrame({
             "Data": [str(data_checklist)],
             "Setor": [setor_checklist],
@@ -300,18 +300,16 @@ with tab4:
         # Filtros interativos
         st.markdown('<div class="titulo-tabela">📅 Filtro por Mês</div>', unsafe_allow_html=True)
         meses_disponiveis = ["Todos"]
+
         if not df_materiais.empty and "Data" in df_materiais.columns:
             df_materiais["Data"] = pd.to_datetime(df_materiais["Data"])
             df_materiais["Mês"] = df_materiais["Data"].dt.to_period('M').astype(str)
             meses_disponiveis += list(df_materiais["Mês"].unique())
 
         filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_atualizado")
-        filtro_setor = st.selectbox("📍 Filtrar por Setor", options=["Todos"] + (
-            list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
-        ), key="filtro_setor_atualizado")
 
-        st.session_state.filtro_mes = filtro_mes
-        st.session_state.filtro_setor = filtro_setor
+        setores_unicos = ["Todos"] + list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
+        filtro_setor = st.selectbox("📍 Filtrar por Setor", options=setores_unicos, key="filtro_setor_atualizado")
 
         # Aplicar filtros
         df_materiais_filtrado = df_materiais.copy()
@@ -345,7 +343,7 @@ with tab4:
             st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
             st.dataframe(df_pivot.sort_values(by="Data", ascending=False), use_container_width=True)
         else:
-            st.info("ℹ️ Não há dados de materiais para exibir.")
+            st.info("ℹ️ Não há registros de materiais.")
 
         # Checklist de atividades
         st.markdown('<div class="titulo-tabela">📋 Checklist de Atividades</div>', unsafe_allow_html=True)
@@ -391,7 +389,7 @@ with tab4:
             st.plotly_chart(fig_carro_setor, use_container_width=True)
 
             st.markdown('<div class="titulo-tabela">📝 Registros do Checklist dos Carros</div>', unsafe_allow_html=True)
-            st.dataframe(df_carros_filtrado[["Data", "Setor"] + cols_carro + ["Observação"]], use_container_width=True)
+            st.dataframe(df_carros_filtrado[["Data", "Setor", "Observação"]], use_container_width=True)
         else:
             st.info("ℹ️ Não há registros de carros funcionais.")
 

@@ -1,13 +1,15 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from gspread_pandas import Spread, Client
+from gspread_pandas import Spread
 from google.oauth2.service_account import Credentials
-import gspread_pandas as gp
+import gspread
+
 
 # === Configuração da página ===
 st.set_page_config(page_title="🏥 App Limpeza Hospitalar", layout="wide")
 st.title("🏥 Controle Operacional - Setor de Limpeza")
+
 
 # === Botão de teste de conexão (na sidebar) ===
 with st.sidebar:
@@ -18,16 +20,20 @@ with st.sidebar:
                      'https://www.googleapis.com/auth/drive'] 
             credentials = Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"], scopes=scope)
-            client = gp.Client(creds=credentials)
-            spreadsheets = client.client.list_spreadsheet_files()
+            
+            # Criar cliente do gspread
+            gc = gspread.authorize(credentials)
+            
+            # Listar planilhas
+            spreadsheets = gc.list_spreadsheet_files()
             st.success("✅ Conectado ao Google Sheets")
             st.write("📄 Planilhas disponíveis:")
             st.write(spreadsheets)
 
             # Testar carregamento da planilha específica
             try:
-                spread = Spread("Controle Limpeza Hospitalar", client=client, create_sheet=False)
-                sheets_list = [sheet.title for sheet in spread.spread.sheet1.parent.worksheets()]
+                spreadsheet = gc.open("Controle Limpeza Hospitalar")
+                sheets_list = [ws.title for ws in spreadsheet.worksheets()]
                 st.write("📎 Abas existentes:")
                 st.write(sheets_list)
             except Exception as e:
@@ -47,22 +53,23 @@ def conectar_planilha(sheet_name="Materiais"):
         ]
         credentials = Credentials.from_service_account_info(
             st.secrets["gcp_service_account"], scopes=scope)
-        client = gp.Client(creds=credentials)
+        
+        # Usando gspread diretamente
+        gc = gspread.authorize(credentials)
+        spreadsheet = gc.open("Controle Limpeza Hospitalar")
 
-        spreadsheet_name = "Controle Limpeza Hospitalar"
-        spread = Spread(spreadsheet_name, client=client, create_sheet=False)
+        # Verificar se aba existe
+        sheets = spreadsheet.worksheets()
+        sheet_titles = [s.title for s in sheets]
 
-        existing_sheets = [sheet.title for sheet in spread.spread.sheet1.parent.worksheets()]
-
-        if sheet_name not in existing_sheets:
+        if sheet_name not in sheet_titles:
             st.warning(f"⚠️ Aba '{sheet_name}' não encontrada. Criando nova aba...")
-            try:
-                spread.create_sheet(sheet_name)
-            except Exception as e:
-                st.error(f"❌ Erro ao criar aba '{sheet_name}': {e}")
-                return None
+            spreadsheet.add_worksheet(title=sheet_name, rows="1000", cols="20")
 
+        # Usando gspread_pandas.Spread para facilitar leitura e escrita
+        spread = Spread("Controle Limpeza Hospitalar", worksheet=sheet_name, creds=credentials)
         return spread
+
     except Exception as e:
         st.error(f"❌ Erro ao conectar à planilha: {e}")
         st.info("💡 Dica: Verifique se você ativou as APIs do Google Sheets e Drive no Google Cloud Console.")
@@ -104,6 +111,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "🚚 Checklist Carro Funcional",
     "📊 Painel de Monitoramento"
 ])
+
 
 # === 1. Lançamento de Materiais ===
 with tab1:
@@ -201,6 +209,7 @@ with tab1:
             else:
                 st.warning("⚠️ Nenhum item foi preenchido.")
 
+
 # === 2. Checklist de Atividades por Setor ===
 with tab2:
     st.header("🧼 Checklist Diário de Atividades")
@@ -260,6 +269,7 @@ with tab2:
         if imagem_upload:
             st.image(imagem_upload, caption="Comprovante Enviado", use_column_width=True)
 
+
 # === 3. Checklist do Carro Funcional ===
 with tab3:
     st.header("🚚 Checklist do Carro Funcional")
@@ -300,6 +310,7 @@ with tab3:
         salvar_no_sheets(df, "Checklist_Carros")
         if imagem_upload_carro:
             st.image(imagem_upload_carro, caption="Comprovante do Carro", use_column_width=True)
+
 
 # === 4. Painel de Monitoramento ===
 with tab4:

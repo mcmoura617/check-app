@@ -12,58 +12,32 @@ st.title("🏥 Controle Operacional - Setor de Limpeza")
 def conectar_planilha(sheet_name="Materiais"):
     try:
         scope = [
-            'https://spreadsheets.google.com/feeds', 
-            'https://www.googleapis.com/auth/drive', 
-            'https://www.googleapis.com/auth/spreadsheets' 
+            'https://spreadsheets.google.com/feeds',  
+            'https://www.googleapis.com/auth/drive',  
+            'https://www.googleapis.com/auth/spreadsheets'  
         ]
-        credentials = Credentials.from_service_account_info(
-            st.secrets["gcp_service_account"], scopes=scope)
-        client = Client(creds=credentials)
+        credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+        client = gp.Client(creds=credentials)
 
-        # Nome da planilha principal
         spreadsheet_name = "Controle Limpeza Hospitalar"
-
-        # Conectar à planilha
         spread = Spread(spreadsheet_name, client=client)
 
-        # Se a aba não existir, criar automaticamente
-        if sheet_name not in spread.sheets:
+        # Recarrega todas as abas existentes
+        existing_sheets = [sheet.title for sheet in spread.spread.sheet1.parent.worksheets()]
+
+        if sheet_name not in existing_sheets:
             st.warning(f"⚠️ Aba '{sheet_name}' não encontrada. Criando nova aba...")
-            spread.create_sheet(sheet_name)
+            try:
+                spread.create_sheet(sheet_name)
+            except Exception as e:
+                st.error(f"❌ Erro ao criar aba '{sheet_name}': {e}")
+                return None
 
         return spread
     except Exception as e:
         st.error(f"❌ Erro ao conectar à planilha: {e}")
         st.info("💡 Dica: Verifique se você ativou as APIs do Google Sheets e Drive no Google Cloud Console.")
         return None
-
-
-def carregar_da_planilha(sheet_name="Materiais"):
-    spread = conectar_planilha(sheet_name)
-    if spread:
-        try:
-            df = spread.sheet_to_df(sheet=sheet_name)
-            if not df.empty:
-                st.success(f"✅ Dados carregados da aba '{sheet_name}'")
-            else:
-                st.info(f"ℹ️ Aba '{sheet_name}' está vazia.")
-            return df
-        except Exception as e:
-            st.warning(f"⚠️ Erro ao carregar '{sheet_name}': {e}")
-    return pd.DataFrame()
-
-
-def salvar_no_sheets(df, sheet_name="Materiais"):
-    if df.empty:
-        st.warning(f"⚠️ Nenhum dado para salvar na aba '{sheet_name}'")
-        return
-    spread = conectar_planilha(sheet_name)
-    if spread:
-        try:
-            spread.df_to_sheet(df, sheet=sheet_name, index=False, replace=True)
-            st.success(f"✅ Dados salvos na aba '{sheet_name}'")
-        except Exception as e:
-            st.error(f"❌ Erro ao salvar na aba '{sheet_name}': {e}")
 
 
 # === Tabs do app ===

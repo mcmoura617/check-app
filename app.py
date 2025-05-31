@@ -12,12 +12,29 @@ st.title("🏥 Controle Operacional - Setor de Limpeza")
 # === Funções para carregar e salvar no Google Sheets ===
 def conectar_planilha(sheet_name="Materiais"):
     try:
-        scope = ['https://spreadsheets.google.com/feeds ', 'https://www.googleapis.com/auth/drive ']
+        scope = [
+            'https://spreadsheets.google.com/feeds', 
+            'https://www.googleapis.com/auth/drive', 
+            'https://www.googleapis.com/auth/spreadsheets' 
+        ]
         credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
         client = gp.Client(creds=credentials)
-        return Spread(sheet_name, client=client)
+
+        # Nome da planilha principal
+        spreadsheet_name = "Controle Limpeza Hospitalar"
+
+        # Conectar à planilha
+        spread = Spread(spreadsheet_name, client=client)
+
+        # Se a aba não existir, criar automaticamente
+        if sheet_name not in spread.sheets:
+            st.warning(f"⚠️ Aba '{sheet_name}' não encontrada. Criando nova aba...")
+            spread.create_sheet(sheet_name)
+
+        return spread
     except Exception as e:
-        st.error(f"❌ Erro ao conectar à planilha '{sheet_name}': {e}")
+        st.error(f"❌ Erro ao conectar à planilha: {e}")
+        st.info("💡 Dica: Verifique se você ativou as APIs do Google Sheets e Drive no Google Cloud Console.")
         return None
 
 
@@ -25,7 +42,7 @@ def carregar_da_planilha(sheet_name="Materiais"):
     spread = conectar_planilha(sheet_name)
     if spread:
         try:
-            df = spread.sheet_to_df()
+            df = spread.sheet_to_df(sheet=sheet_name)
             if not df.empty:
                 st.success(f"✅ Dados carregados da aba '{sheet_name}'")
             else:
@@ -61,8 +78,10 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # === 1. Lançamento de Materiais ===
 with tab1:
     st.header("📦 Lançamento de Materiais Utilizados")
+    
     with st.form(key="form_material"):
         data_uso = st.date_input("📅 Data de Uso")
+        
         setores = [
             "Área Externa", "Cme", "Recepção", "Térreo Ala Norte",
             "Térreo Ala Sul", "Cc", "Cos", "3º Andar", "4º Roll",
@@ -126,11 +145,12 @@ with tab1:
                         "Tipo": tipo
                     })
 
-            # Adicionar itens
+            # Papéis
             adicionar_registro("P. Bobina", papel_bobina, "Papel")
             adicionar_registro("P. Higiênico", papel_higienico, "Papel")
             adicionar_registro("Papel Tolha", papel_tolha, "Papel")
 
+            # Sacos
             adicionar_registro("30p", saco_30p, "Saco")
             adicionar_registro("50p", saco_50p, "Saco")
             adicionar_registro("100p", saco_100p, "Saco")
@@ -141,21 +161,25 @@ with tab1:
             adicionar_registro("50v", saco_50v, "Saco")
             adicionar_registro("Ramber", ramper, "Saco")
 
+            # Sabonetes
             adicionar_registro("Neutro", sabonete_neutro, "Sabonete")
             adicionar_registro("Erva Doce", sabonete_erva_doce, "Sabonete")
             adicionar_registro("Clorexidina", sabonete_clorexidina, "Sabonete")
             adicionar_registro("Álcool Gel", alcool_gel, "Sabonete")
             adicionar_registro("Álcool 70", alcool_70, "Sabonete")
 
+            # Produtos
             adicionar_registro("Desinfetante", desinfetante, "Produto")
             adicionar_registro("Hipoclorito", hipoclorito, "Produto")
             adicionar_registro("Peróxido", peroxido, "Produto")
             adicionar_registro("Detergente", detergente, "Produto")
             adicionar_registro("Quartenário", quartenario, "Produto")
 
+            # Copos
             adicionar_registro("150ml", copo_150ml, "Copo")
             adicionar_registro("50ml", copo_50ml, "Copo")
 
+            # Mops
             adicionar_registro("Úmido", mop_umido, "Mop")
             adicionar_registro("Pó", mop_po, "Mop")
 
@@ -183,13 +207,11 @@ with tab2:
 
     with col1:
         setor_checklist = st.selectbox("📍 Selecione o Setor", setores)
-
     with col2:
         turno = st.selectbox("⏰ Selecione o Turno", turno_opcoes)
 
     data_checklist = st.date_input("📅 Data da Atividade")
     colaborador = st.text_input("🧑‍🔧 Colaborador(a) Responsável")
-
     st.subheader("🗂 Itens de Limpeza")
     coluna1, coluna2 = st.columns(2)
 
@@ -237,7 +259,7 @@ with tab2:
 # === 3. Checklist do Carro Funcional ===
 with tab3:
     st.header("🚚 Checklist do Carro Funcional")
-
+    
     setores_carro = setores.copy()
     data_carro = st.date_input("📅 Data do Checklist")
     setor_carro = st.selectbox("📍 Selecione o Setor", setores_carro, key="carro_setor_selectbox")
@@ -300,7 +322,6 @@ with tab4:
         # Filtros interativos
         st.markdown('<div class="titulo-tabela">📅 Filtro por Mês</div>', unsafe_allow_html=True)
         meses_disponiveis = ["Todos"]
-
         if not df_materiais.empty and "Data" in df_materiais.columns:
             df_materiais["Data"] = pd.to_datetime(df_materiais["Data"])
             df_materiais["Mês"] = df_materiais["Data"].dt.to_period('M').astype(str)
@@ -322,7 +343,7 @@ with tab4:
             if filtro_setor != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
 
-        # Gráfico de quantidade por itens
+        # Gráfico de materiais
         st.markdown('<div class="titulo-tabela">🧾 Materiais Utilizados</div>', unsafe_allow_html=True)
         if not df_materiais_filtrado.empty:
             resumo_tipo = df_materiais_filtrado.groupby("Item")["Quantidade"].sum().sort_values(ascending=False).reset_index()
@@ -343,7 +364,7 @@ with tab4:
             st.markdown('<div class="titulo-tabela">🧮 Resumo Consolidado - Itens como Colunas</div>', unsafe_allow_html=True)
             st.dataframe(df_pivot.sort_values(by="Data", ascending=False), use_container_width=True)
         else:
-            st.info("ℹ️ Não há registros de materiais.")
+            st.info("ℹ️ Não há dados de materiais para exibir.")
 
         # Checklist de atividades
         st.markdown('<div class="titulo-tabela">📋 Checklist de Atividades</div>', unsafe_allow_html=True)

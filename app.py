@@ -20,19 +20,18 @@ def conectar_planilha(sheet_name="Materiais"):
         credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
         client = gp.Client(creds=credentials)
 
+        # Nome da planilha
         spreadsheet_name = "Controle Limpeza Hospitalar"
+
+        # Conectar à planilha
         spread = Spread(spreadsheet_name, client=client)
 
-        # Recarrega todas as abas existentes
-        existing_sheets = [sheet.title for sheet in spread.spread.sheet1.parent.worksheets()]
+        # Listar abas existentes
+        existing_sheets = [sheet.title for sheet in spread.spread.worksheets()]
 
         if sheet_name not in existing_sheets:
             st.warning(f"⚠️ Aba '{sheet_name}' não encontrada. Criando nova aba...")
-            try:
-                spread.create_sheet(sheet_name)
-            except Exception as e:
-                st.error(f"❌ Erro ao criar aba '{sheet_name}': {e}")
-                return None
+            spread.create_sheet(sheet_name)
 
         return spread
     except Exception as e:
@@ -282,12 +281,10 @@ with tab4:
             st.session_state['filtro_mes'] = "Todos"
         if 'filtro_setor' not in st.session_state:
             st.session_state['filtro_setor'] = "Todos"
-
         # Carregar dados das planilhas
         df_materiais = carregar_da_planilha("Materiais")
         df_checklist = carregar_da_planilha("Checklist_Atividades")
         df_carros = carregar_da_planilha("Checklist_Carros")
-
         # Filtros interativos
         st.markdown('<div class="titulo-tabela">📅 Filtro por Mês</div>', unsafe_allow_html=True)
         meses_disponiveis = ["Todos"]
@@ -298,29 +295,24 @@ with tab4:
         filtro_mes = st.selectbox("Selecione o Mês", options=meses_disponiveis, key="filtro_mes_atualizado")
         setores_unicos = ["Todos"] + list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
         filtro_setor = st.selectbox("📍 Filtrar por Setor", options=setores_unicos, key="filtro_setor_atualizado")
-
         # Aplicar filtros
         df_materiais_filtrado = df_materiais.copy()
         df_checklist_filtrado = df_checklist.copy()
         df_carros_filtrado = df_carros.copy()
-
         if not df_materiais_filtrado.empty:
             if filtro_mes != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
             if filtro_setor != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
-
         # Gráfico de materiais
         st.markdown('<div class="titulo-tabela">🧾 Materiais Utilizados</div>', unsafe_allow_html=True)
         if not df_materiais_filtrado.empty:
             resumo_tipo = df_materiais_filtrado.groupby("Item")["Quantidade"].sum().sort_values(ascending=False).reset_index()
             fig_item = px.bar(resumo_tipo, x="Item", y="Quantidade", title="📦 Total de Cada Item Utilizado", text_auto=True)
             st.plotly_chart(fig_item, use_container_width=True)
-
             resumo_setor = df_materiais_filtrado.groupby("Setor")["Quantidade"].sum().reset_index()
             fig_setor = px.bar(resumo_setor, x="Setor", y="Quantidade", title="📍 Total de Itens por Setor", text_auto=True)
             st.plotly_chart(fig_setor, use_container_width=True)
-
             df_pivot = df_materiais_filtrado.pivot_table(
                 index=["Data", "Setor"],
                 columns="Item",
@@ -332,7 +324,6 @@ with tab4:
             st.dataframe(df_pivot.sort_values(by="Data", ascending=False), use_container_width=True)
         else:
             st.info("ℹ️ Não há dados de materiais para exibir.")
-
         # Checklist de atividades
         st.markdown('<div class="titulo-tabela">📋 Checklist de Atividades</div>', unsafe_allow_html=True)
         if not df_checklist.empty:
@@ -354,7 +345,6 @@ with tab4:
             st.dataframe(df_checklist[["Data", "Setor", "Turno", "Colaborador", "Observação"]], use_container_width=True)
         else:
             st.info("ℹ️ Não há registros de checklist de atividades.")
-
         # Checklist de carros
         st.markdown('<div class="titulo-tabela">🚚 Checklist do Carro Funcional</div>', unsafe_allow_html=True)
         if not df_carros.empty:

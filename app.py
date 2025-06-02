@@ -289,7 +289,7 @@ with tab4:
         df_carros = carregar_da_planilha("Checklist_Carros")
 
         # Filtros principais
-        st.markdown("### 🔍 Filtros")
+        st.markdown("### 🔍 Filtros Gerais")
         col_filtro_mes, col_filtro_setor = st.columns(2)
 
         with col_filtro_mes:
@@ -314,6 +314,32 @@ with tab4:
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
             if filtro_setor != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
+
+        # === Métricas Rápidas ===
+        st.markdown("### 📊 Métricas Gerais")
+        col_metrica1, col_metrica2, col_metrica3 = st.columns(3)
+
+        total_materiais = df_materiais_filtrado["Quantidade"].sum() if not df_materiais_filtrado.empty else 0
+        dias_distintos = df_materiais_filtrado["Data"].nunique() if not df_materiais_filtrado.empty else 1
+        media_diaria = total_materiais / dias_distintos if dias_distintos > 0 else 0
+
+        with col_metrica1:
+            st.metric(label="📦 Total de Itens Utilizados", value=f"{total_materiais:,}")
+
+        with col_metrica2:
+            st.metric(label="🧮 Média Diária", value=f"{media_diaria:.1f}/dia")
+
+        if not df_checklist.empty:
+            colunas_atividades = [col for col in df_checklist.columns if col not in ['Data', 'Setor', 'Turno', 'Colaborador', 'Observação', 'Imagem']]
+            df_checklist['Itens_Concluidos'] = df_checklist[colunas_atividades].sum(axis=1)
+            df_checklist['Total_Itens'] = len(colunas_atividades)
+            df_checklist['Percentual_Concluido'] = (df_checklist['Itens_Concluidos'] / df_checklist['Total_Itens']) * 100
+            media_conclusao_checklist = df_checklist['Percentual_Concluido'].mean() if not df_checklist.empty else 0
+        else:
+            media_conclusao_checklist = 0
+
+        with col_metrica3:
+            st.metric(label="✅ % de Conclusão Checklist", value=f"{media_conclusao_checklist:.1f}%")
 
         # === Seção: Materiais Utilizados ===
         st.markdown("## 📦 Materiais Utilizados")
@@ -374,12 +400,14 @@ with tab4:
         if not df_carros.empty:
             col1, col2 = st.columns([1, 2])
 
+            cols_carro = [col for col in df_carros.columns if col not in ['Data', 'Setor', 'Observação', 'Imagem']]
+            df_carros['Itens_Concluidos'] = df_carros[cols_carro].sum(axis=1)
+            df_carros['Total_Itens'] = len(cols_carro)
+            df_carros['Percentual_Concluido'] = (df_carros['Itens_Concluidos'] / df_carros['Total_Itens']) * 100
+            resumo_carro_setor = df_carros.groupby("Setor")["Percentual_Concluido"].mean().reset_index()
+
             with col1:
-                cols_carro = [col for col in df_carros.columns if col not in ['Data', 'Setor', 'Observação', 'Imagem']]
-                df_carros['Itens_Concluidos'] = df_carros[cols_carro].sum(axis=1)
-                df_carros['Total_Itens'] = len(cols_carro)
-                df_carros['Percentual_Concluido'] = (df_carros['Itens_Concluidos'] / df_carros['Total_Itens']) * 100
-                resumo_carro_setor = df_carros.groupby("Setor")["Percentual_Concluido"].mean().reset_index()
+                st.markdown("🚚 % de Itens nos Carros")
                 st.dataframe(resumo_carro_setor, use_container_width=True)
 
             with col2:

@@ -295,7 +295,7 @@ with tab4:
         with col_filtro_mes:
             meses_disponiveis = ["Todos"]
             if not df_materiais.empty and "Data" in df_materiais.columns:
-                df_materiais["Data"] = pd.to_datetime(df_materiais["Data"])
+                df_materiais["Data"] = pd.to_datetime(df_materiais["Data"], errors='coerce')
                 df_materiais["Mês"] = df_materiais["Data"].dt.to_period('M').astype(str)
                 meses_disponiveis += list(df_materiais["Mês"].unique())
             filtro_mes = st.selectbox("📅 Selecione o Mês", options=meses_disponiveis, key="filtro_mes_atualizado")
@@ -304,31 +304,31 @@ with tab4:
             setores_unicos = ["Todos"] + list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
             filtro_setor = st.selectbox("📍 Filtrar por Setor", options=setores_unicos, key="filtro_setor_atualizado")
 
-        # Filtro por Item Específico
-        if not df_materiais.empty:
-            itens_unicos = ["Todos"] + list(df_materiais["Item"].unique())
-            filtro_item = st.selectbox("🧾 Filtrar por Item", options=itens_unicos)
-
         # Aplicar filtros
         df_materiais_filtrado = df_materiais.copy()
         df_checklist_filtrado = df_checklist.copy()
         df_carros_filtrado = df_carros.copy()
 
         if not df_materiais_filtrado.empty:
-            if filtro_mes != "Todos":
+            if "Mês" in df_materiais_filtrado.columns and filtro_mes != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
-            if filtro_setor != "Todos":
+            if "Setor" in df_materiais_filtrado.columns and filtro_setor != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
-            if 'filtro_item' in locals() and filtro_item != "Todos":
-                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
 
         # === Métricas Rápidas ===
         st.markdown("### 📊 Métricas Gerais")
         col_metrica1, col_metrica2, col_metrica3 = st.columns(3)
 
-        total_materiais = df_materiais_filtrado["Quantidade"].sum() if not df_materiais_filtrado.empty else 0
-        dias_distintos = df_materiais_filtrado["Data"].nunique() if not df_materiais_filtrado.empty else 1
-        media_diaria = total_materiais / dias_distintos if dias_distintos > 0 else 0
+        total_materiais = 0
+        dias_distintos = 1
+        media_diaria = 0
+
+        if not df_materiais_filtrado.empty:
+            if "Quantidade" in df_materiais_filtrado.columns:
+                total_materiais = df_materiais_filtrado["Quantidade"].sum()
+            if "Data" in df_materiais_filtrado.columns:
+                dias_distintos = df_materiais_filtrado["Data"].nunique() or 1
+                media_diaria = total_materiais / dias_distintos
 
         with col_metrica1:
             st.metric(label="📦 Total de Itens Utilizados", value=f"{total_materiais:,}")
@@ -402,7 +402,7 @@ with tab4:
         else:
             st.info("ℹ️ Não há registros de checklist de atividades.")
 
-        # === Seção: Checklist de Carros ===
+        # === Seção: Checklist de Carros Funcionais ===
         st.markdown("## 🚚 Checklist do Carro Funcional")
         if not df_carros.empty:
             col1, col2 = st.columns([1, 2])

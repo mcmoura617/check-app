@@ -304,6 +304,11 @@ with tab4:
             setores_unicos = ["Todos"] + list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
             filtro_setor = st.selectbox("📍 Filtrar por Setor", options=setores_unicos, key="filtro_setor_atualizado")
 
+        # Filtro por Item Específico
+        if not df_materiais.empty:
+            itens_unicos = ["Todos"] + list(df_materiais["Item"].unique())
+            filtro_item = st.selectbox("🧾 Filtrar por Item", options=itens_unicos)
+
         # Aplicar filtros
         df_materiais_filtrado = df_materiais.copy()
         df_checklist_filtrado = df_checklist.copy()
@@ -314,6 +319,8 @@ with tab4:
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
             if filtro_setor != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
+            if 'filtro_item' in locals() and filtro_item != "Todos":
+                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
 
         # === Métricas Rápidas ===
         st.markdown("### 📊 Métricas Gerais")

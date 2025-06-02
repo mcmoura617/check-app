@@ -282,6 +282,8 @@ with tab4:
             st.session_state['filtro_mes'] = "Todos"
         if 'filtro_setor' not in st.session_state:
             st.session_state['filtro_setor'] = "Todos"
+        if 'filtro_item' not in st.session_state:
+            st.session_state['filtro_item'] = "Todos"
 
         # Carregar dados das planilhas
         df_materiais = carregar_da_planilha("Materiais")
@@ -290,7 +292,7 @@ with tab4:
 
         # Filtros principais
         st.markdown("### 🔍 Filtros Gerais")
-        col_filtro_mes, col_filtro_setor = st.columns(2)
+        col_filtro_mes, col_filtro_setor, col_filtro_item = st.columns(3)
 
         with col_filtro_mes:
             meses_disponiveis = ["Todos"]
@@ -304,6 +306,10 @@ with tab4:
             setores_unicos = ["Todos"] + list(df_materiais["Setor"].unique()) if not df_materiais.empty and "Setor" in df_materiais.columns else ["Todos"]
             filtro_setor = st.selectbox("📍 Filtrar por Setor", options=setores_unicos, key="filtro_setor_atualizado")
 
+        with col_filtro_item:
+            itens_unicos = ["Todos"] + list(df_materiais["Item"].unique()) if not df_materiais.empty and "Item" in df_materiais.columns else ["Todos"]
+            filtro_item = st.selectbox("🧾 Filtrar por Item", options=itens_unicos, key="filtro_item_atualizado")
+
         # Aplicar filtros
         df_materiais_filtrado = df_materiais.copy()
         df_checklist_filtrado = df_checklist.copy()
@@ -314,6 +320,8 @@ with tab4:
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Mês"] == filtro_mes]
             if "Setor" in df_materiais_filtrado.columns and filtro_setor != "Todos":
                 df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Setor"] == filtro_setor]
+            if "Item" in df_materiais_filtrado.columns and filtro_item != "Todos":
+                df_materiais_filtrado = df_materiais_filtrado[df_materiais_filtrado["Item"] == filtro_item]
 
         # === Métricas Rápidas ===
         st.markdown("### 📊 Métricas Gerais")
@@ -331,7 +339,7 @@ with tab4:
                 media_diaria = total_materiais / dias_distintos
 
         with col_metrica1:
-            st.metric(label="📦 Total de Itens Utilizados", value=f"{int(total_materiais):,}")
+            st.metric(label="📦 Total de Itens Utilizados", value=f"{total_materiais:,}")
 
         with col_metrica2:
             st.metric(label="🧮 Média Diária", value=f"{media_diaria:.1f}/dia")

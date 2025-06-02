@@ -331,7 +331,7 @@ with tab4:
                 media_diaria = total_materiais / dias_distintos
 
         with col_metrica1:
-            st.metric(label="📦 Total de Itens Utilizados", value=f"{total_materiais:,}")
+            st.metric(label="📦 Total de Itens Utilizados", value=f"{int(total_materiais):,}")
 
         with col_metrica2:
             st.metric(label="🧮 Média Diária", value=f"{media_diaria:.1f}/dia")
